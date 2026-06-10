@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <!-- cloud -->
+  <path d="M 700 560
+           a 120 120 0 0 0 -8 -240 a 160 160 0 0 0 -300 -40 a 140 140 0 0 0 -60 268 z"
+        fill="#ffffff" opacity="0.95"/>
+  <!-- up arrow -->
+  <g stroke="#ffffff" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 392 800 V 620 M 392 620 m -70 70 l 70 -70 l 70 70"/>
+  </g>
+  <!-- down arrow -->
+  <g stroke="#bfdbfe" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 632 620 V 800 M 632 800 m -70 -70 l 70 70 l 70 -70"/>
+  </g>
+</svg>

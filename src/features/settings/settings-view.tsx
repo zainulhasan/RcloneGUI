@@ -1,4 +1,5 @@
-import { FolderOpen } from "lucide-react";
+import { useState } from "react";
+import { FolderOpen, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useRcloneInfo } from "@/features/health/use-daemon";
+import { checkForUpdates } from "@/features/updater/use-updater";
 import { useSettingsStore } from "@/store/settings";
 import { useThemeStore, type Theme } from "@/store/theme";
 
@@ -63,6 +65,7 @@ function Row({
 }
 
 export function SettingsView() {
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const theme = useThemeStore((s) => s.theme);
@@ -257,6 +260,22 @@ export function SettingsView() {
             value={settings.tmdbApiKey ?? ""}
             onChange={(e) => void update({ tmdbApiKey: e.target.value.trim() || null })}
           />
+        </Row>
+      </Section>
+
+      <Section title="Updates" description="RcloneGUI also checks automatically on launch.">
+        <Row label="Check for updates">
+          <Button
+            variant="outline"
+            className="w-fit"
+            disabled={checkingUpdates}
+            onClick={() => {
+              setCheckingUpdates(true);
+              void checkForUpdates({ silent: false }).finally(() => setCheckingUpdates(false));
+            }}
+          >
+            <RefreshCw /> Check now
+          </Button>
         </Row>
       </Section>
     </div>

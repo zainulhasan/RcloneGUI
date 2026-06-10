@@ -15,6 +15,8 @@ import { useSchedulerRunner } from "@/features/scheduler/use-scheduler-runner";
 import { SettingsView } from "@/features/settings/settings-view";
 import { TransfersView } from "@/features/transfers/transfers-view";
 import { useJobCompletionWatcher } from "@/features/transfers/use-transfers";
+import { UpdateDialog } from "@/features/updater/update-dialog";
+import { useLaunchUpdateCheck } from "@/features/updater/use-updater";
 import { useNavigationStore, type View } from "@/store/navigation";
 
 const queryClient = new QueryClient({
@@ -81,6 +83,7 @@ function BackgroundServices() {
   useJobCompletionWatcher();
   useSchedulerRunner();
   useCleanupRunner();
+  useLaunchUpdateCheck();
   return null;
 }
 
@@ -93,6 +96,7 @@ function App() {
           <AppShell>
             <CurrentView />
           </AppShell>
+          <UpdateDialog />
         </DaemonGate>
         <Toaster />
       </TooltipProvider>
