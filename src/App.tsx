@@ -5,6 +5,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { DaemonGate } from "@/features/health/daemon-gate";
 import { BrowserWithOperations } from "@/features/operations/browser-operations";
 import { LogsView } from "@/features/logs/logs-view";
+import { MediaView } from "@/features/media/media-view";
+import { WatchedBadge, WatchMenuItems } from "@/features/media/browser-integration";
+import { useCleanupRunner } from "@/features/media/use-cleanup-runner";
 import { MountsView } from "@/features/mounts/mounts-view";
 import { RemotesView } from "@/features/remotes/remotes-view";
 import { SchedulerView } from "@/features/scheduler/scheduler-view";
@@ -50,7 +53,14 @@ function CurrentView() {
     case "remotes":
       return <RemotesView />;
     case "browser":
-      return <BrowserWithOperations />;
+      return (
+        <BrowserWithOperations
+          renderItemBadge={(item, pane) => <WatchedBadge item={item} pane={pane} />}
+          renderItemActions={(items, pane) => <WatchMenuItems items={items} pane={pane} />}
+        />
+      );
+    case "media":
+      return <MediaView />;
     case "transfers":
       return <TransfersView />;
     case "mounts":
@@ -70,6 +80,7 @@ function CurrentView() {
 function BackgroundServices() {
   useJobCompletionWatcher();
   useSchedulerRunner();
+  useCleanupRunner();
   return null;
 }
 

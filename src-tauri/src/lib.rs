@@ -11,6 +11,19 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(
+                    "sqlite:media.db",
+                    vec![tauri_plugin_sql::Migration {
+                        version: 1,
+                        description: "create media_items",
+                        sql: include_str!("../migrations/001_media_items.sql"),
+                        kind: tauri_plugin_sql::MigrationKind::Up,
+                    }],
+                )
+                .build(),
+        )
         .manage(DaemonState::default())
         .invoke_handler(tauri::generate_handler![
             commands::detect_rclone,
