@@ -23,8 +23,15 @@ mod tests {
 
     #[test]
     fn port_is_bindable_after_selection() {
-        let port = pick_free_port().expect("should find a free port");
-        TcpListener::bind(("127.0.0.1", port)).expect("selected port should be bindable");
+        // Another parallel test can grab the port between selection and bind,
+        // so allow a few attempts — one success proves the mechanism.
+        for _ in 0..5 {
+            let port = pick_free_port().expect("should find a free port");
+            if TcpListener::bind(("127.0.0.1", port)).is_ok() {
+                return;
+            }
+        }
+        panic!("selected ports were never bindable");
     }
 
     #[test]
