@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
+import { DaemonGate } from "@/features/health/daemon-gate";
+import { BrowserView } from "@/features/browser/browser-view";
+import { RemotesView } from "@/features/remotes/remotes-view";
 import { useNavigationStore, type View } from "@/store/navigation";
 
 const queryClient = new QueryClient({
@@ -25,8 +28,7 @@ const VIEW_TITLES: Record<View, string> = {
   settings: "Settings",
 };
 
-function CurrentView() {
-  const view = useNavigationStore((s) => s.view);
+function Placeholder({ view }: { view: View }) {
   return (
     <div className="p-6">
       <h1 className="text-xl font-semibold">{VIEW_TITLES[view]}</h1>
@@ -35,13 +37,27 @@ function CurrentView() {
   );
 }
 
+function CurrentView() {
+  const view = useNavigationStore((s) => s.view);
+  switch (view) {
+    case "remotes":
+      return <RemotesView />;
+    case "browser":
+      return <BrowserView />;
+    default:
+      return <Placeholder view={view} />;
+  }
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
-        <AppShell>
-          <CurrentView />
-        </AppShell>
+        <DaemonGate>
+          <AppShell>
+            <CurrentView />
+          </AppShell>
+        </DaemonGate>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
