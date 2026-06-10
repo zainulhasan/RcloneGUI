@@ -18,7 +18,6 @@ import { useActivityStore, type ActivityLevel } from "@/store/activity";
 
 import { DAEMON_LEVEL_RANK, daemonLineLevel, type DaemonLevel } from "./log-level";
 
-
 function DaemonLogs() {
   const [minLevel, setMinLevel] = useState<DaemonLevel>("INFO");
   const logs = useQuery({
@@ -52,10 +51,7 @@ function DaemonLogs() {
       ) : (
         <pre className="bg-card min-h-0 flex-1 overflow-auto rounded-lg border p-3 font-mono text-xs leading-5">
           {lines.map((line, i) => (
-            <div
-              key={i}
-              className={cn(daemonLineLevel(line) === "ERROR" && "text-destructive")}
-            >
+            <div key={i} className={cn(daemonLineLevel(line) === "ERROR" && "text-destructive")}>
               {line}
             </div>
           ))}
