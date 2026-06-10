@@ -90,12 +90,21 @@ export class RcClient {
     return this.call("config/providers");
   }
 
-  createRemote(name: string, type: string, parameters: Record<string, unknown>): Promise<void> {
+  /**
+   * Create a remote. OAuth backends pass `interactive: true` so rclone runs
+   * its browser-based authorization flow on this machine.
+   */
+  createRemote(
+    name: string,
+    type: string,
+    parameters: Record<string, unknown>,
+    opts?: { interactive?: boolean },
+  ): Promise<void> {
     return this.call("config/create", {
       name,
       type,
       parameters,
-      opt: { nonInteractive: true, obscure: true },
+      opt: { nonInteractive: !opts?.interactive, obscure: true },
     });
   }
 
