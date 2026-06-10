@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { DaemonGate } from "@/features/health/daemon-gate";
+import { DashboardView } from "@/features/dashboard/dashboard-view";
 import { BrowserWithOperations } from "@/features/operations/browser-operations";
 import { LogsView } from "@/features/logs/logs-view";
 import { MediaView } from "@/features/media/media-view";
@@ -52,6 +53,8 @@ function Placeholder({ view }: { view: View }) {
 function CurrentView() {
   const view = useNavigationStore((s) => s.view);
   switch (view) {
+    case "dashboard":
+      return <DashboardView />;
     case "remotes":
       return <RemotesView />;
     case "browser":
