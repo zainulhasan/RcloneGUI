@@ -40,4 +40,11 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // shadcn primitives intentionally export variant helpers next to components.
+    files: ["src/components/ui/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 ]);
