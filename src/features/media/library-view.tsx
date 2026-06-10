@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/layout/page";
 import { useRemotes } from "@/features/remotes/use-remotes";
 import { rc, type RcListItem } from "@/lib/rc-client";
 import { useSettingsStore } from "@/store/settings";
@@ -194,10 +195,11 @@ export function LibraryView() {
       ) : library.data ? (
         <p className="text-muted-foreground text-sm">No video files in this folder.</p>
       ) : (
-        <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16">
-          <Clapperboard className="size-8" />
-          <p className="text-sm">Pick a remote folder with films and press Scan.</p>
-        </div>
+        <EmptyState
+          icon={Clapperboard}
+          title="Scan a media folder"
+          hint="Pick a remote folder with films and press Scan to build the poster grid."
+        />
       )}
     </div>
   );

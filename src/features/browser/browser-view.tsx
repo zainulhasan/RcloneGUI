@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page";
 import { useRemotes } from "@/features/remotes/use-remotes";
 
 import { Pane, type PaneProps } from "./pane";
@@ -11,7 +12,10 @@ export function BrowserView({
 
   return (
     <div className="flex h-full flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Browser</h1>
+      <PageHeader
+        title="Browser"
+        description="Dual panes — right-click a selection to copy, sync or move it to the other pane."
+      />
       <div className="flex min-h-0 flex-1 gap-4">
         <Pane
           index={0}

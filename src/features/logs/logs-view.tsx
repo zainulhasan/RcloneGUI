@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useActivityStore, type ActivityLevel } from "@/store/activity";
+import { EmptyState, PageHeader } from "@/components/layout/page";
 
 import { DAEMON_LEVEL_RANK, daemonLineLevel, type DaemonLevel } from "./log-level";
 
@@ -123,17 +124,19 @@ function ActivityLogs() {
 
 function EmptyLogs({ label }: { label: string }) {
   return (
-    <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-16">
-      <ScrollText className="size-8" />
-      <p className="text-sm">{label}</p>
-    </div>
+    <EmptyState
+      icon={ScrollText}
+      title="Nothing logged yet"
+      hint={label}
+      className="flex-1 justify-center"
+    />
   );
 }
 
 export function LogsView() {
   return (
     <div className="flex h-full flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Logs</h1>
+      <PageHeader title="Logs" description="App activity and the rclone daemon's own log." />
       <Tabs defaultValue="activity" className="flex min-h-0 flex-1 flex-col">
         <TabsList>
           <TabsTrigger value="activity">Activity</TabsTrigger>

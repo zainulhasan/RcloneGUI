@@ -3,6 +3,7 @@ import { CalendarClock, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -157,18 +158,22 @@ export function SchedulerView() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Scheduler</h1>
-        <Button onClick={() => setDialog({ open: true, job: null })}>
-          <Plus /> New job
-        </Button>
-      </div>
+      <PageHeader
+        title="Scheduler"
+        description="Recurring copy/sync/move jobs that run while the app is open."
+        actions={
+          <Button onClick={() => setDialog({ open: true, job: null })}>
+            <Plus /> New job
+          </Button>
+        }
+      />
 
       {jobs.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16">
-          <CalendarClock className="size-8" />
-          <p className="text-sm">No scheduled jobs. Jobs run while the app is open.</p>
-        </div>
+        <EmptyState
+          icon={CalendarClock}
+          title="No scheduled jobs"
+          hint="Create one to back up or sync on a cron schedule."
+        />
       ) : (
         <Table>
           <TableHeader>
