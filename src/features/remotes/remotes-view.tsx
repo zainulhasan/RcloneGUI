@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -71,17 +72,20 @@ export function RemotesView() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Remotes</h1>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setWizardOpen(true);
-          }}
-        >
-          <Plus /> Add remote
-        </Button>
-      </div>
+      <PageHeader
+        title="Remotes"
+        description="Cloud storage connections managed through rclone."
+        actions={
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setWizardOpen(true);
+            }}
+          >
+            <Plus /> Add remote
+          </Button>
+        }
+      />
 
       {remotes.isLoading ? (
         <div className="flex flex-col gap-2">
@@ -90,9 +94,11 @@ export function RemotesView() {
           <Skeleton className="h-10 w-full" />
         </div>
       ) : entries.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16">
-          <Server className="size-8" />
-          <p className="text-sm">No remotes configured yet.</p>
+        <EmptyState
+          icon={Server}
+          title="No remotes yet"
+          hint="Connect S3, Google Drive, Dropbox, SFTP and 40+ other providers."
+        >
           <Button
             variant="outline"
             onClick={() => {
@@ -102,7 +108,7 @@ export function RemotesView() {
           >
             <Plus /> Add your first remote
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <Table>
           <TableHeader>

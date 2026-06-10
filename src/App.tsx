@@ -9,6 +9,8 @@ import { LogsView } from "@/features/logs/logs-view";
 import { MediaView } from "@/features/media/media-view";
 import { WatchedBadge, WatchMenuItems } from "@/features/media/browser-integration";
 import { useCleanupRunner } from "@/features/media/use-cleanup-runner";
+import { useHomeInit } from "@/features/browser/use-home-init";
+import { useAutoMounts } from "@/features/mounts/use-auto-mounts";
 import { MountsView } from "@/features/mounts/mounts-view";
 import { RemotesView } from "@/features/remotes/remotes-view";
 import { SchedulerView } from "@/features/scheduler/scheduler-view";
@@ -87,6 +89,8 @@ function BackgroundServices() {
   useSchedulerRunner();
   useCleanupRunner();
   useLaunchUpdateCheck();
+  useHomeInit();
+  useAutoMounts();
   return null;
 }
 

@@ -258,11 +258,18 @@ export class RcClient {
 
   // ── mounts ────────────────────────────────────────────────────────────
 
-  mount(fs: string, mountPoint: string, opt?: Record<string, unknown>): Promise<void> {
+  mount(
+    fs: string,
+    mountPoint: string,
+    opts?: { mountOpt?: Record<string, unknown>; vfsOpt?: Record<string, unknown> },
+  ): Promise<void> {
     return this.call("mount/mount", {
       fs,
       mountPoint,
-      ...(opt ? { mountOpt: opt } : {}),
+      ...(opts?.mountOpt && Object.keys(opts.mountOpt).length > 0
+        ? { mountOpt: opts.mountOpt }
+        : {}),
+      ...(opts?.vfsOpt && Object.keys(opts.vfsOpt).length > 0 ? { vfsOpt: opts.vfsOpt } : {}),
     });
   }
 

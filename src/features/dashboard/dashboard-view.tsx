@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRcloneInfo } from "@/features/health/use-daemon";
@@ -75,7 +76,7 @@ export function DashboardView() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
+      <PageHeader title="Dashboard" description="Health, activity and quick actions at a glance." />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard

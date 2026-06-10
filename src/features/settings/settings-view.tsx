@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FolderOpen, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,7 +75,7 @@ export function SettingsView() {
 
   return (
     <div className="flex max-w-3xl flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Settings</h1>
+      <PageHeader title="Settings" description="Preferences are saved automatically." />
 
       <Section title="Appearance">
         <Row label="Theme">

@@ -2,6 +2,7 @@ import { ArrowDownUp, CheckCircle2, Loader2, Trash2, XCircle, XOctagon } from "l
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -140,14 +141,17 @@ export function TransfersView() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Transfers</h1>
-        {hasFinished && (
-          <Button variant="outline" size="sm" onClick={clearFinished}>
-            Clear finished
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Transfers"
+        description="Live progress of running and recent jobs."
+        actions={
+          hasFinished ? (
+            <Button variant="outline" size="sm" onClick={clearFinished}>
+              Clear finished
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -167,10 +171,11 @@ export function TransfersView() {
       </Card>
 
       {activeJobs.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16">
-          <ArrowDownUp className="size-8" />
-          <p className="text-sm">No transfers yet. Start one from the Browser.</p>
-        </div>
+        <EmptyState
+          icon={ArrowDownUp}
+          title="No transfers yet"
+          hint="Right-click files in the Browser to copy, sync or move them."
+        />
       ) : (
         activeJobs.map((job) => <JobCard key={job.jobid} job={job} />)
       )}

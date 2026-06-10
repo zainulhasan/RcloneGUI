@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUp,
   ChevronRight,
   File,
   Folder,
+  FolderOpen,
   FolderPlus,
   HardDrive,
+  Home,
   Loader2,
   RefreshCw,
 } from "lucide-react";
@@ -39,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { rc, type RcListItem } from "@/lib/rc-client";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useBrowserStore, type PaneIndex } from "@/store/browser";
+import { absoluteToLocalPath, parentPath, useBrowserStore, type PaneIndex } from "@/store/browser";
 
 import { applyClick, EMPTY_SELECTION, pruneSelection, type SelectionState } from "./selection";
 import { LOCAL_FS, useListing } from "./use-listing";
@@ -54,27 +57,38 @@ function sortListing(items: RcListItem[]): RcListItem[] {
 function Breadcrumb({
   fs,
   path,
+  homePath,
   onNavigate,
 }: {
   fs: string;
   path: string;
+  homePath: string;
   onNavigate: (path: string) => void;
 }) {
-  const segments = path ? path.split("/") : [];
+  // Under the home folder, collapse the long prefix to "~".
+  const underHome =
+    fs === LOCAL_FS && homePath !== "" && (path === homePath || path.startsWith(`${homePath}/`));
+  const rootLabel = underHome ? "~" : fs === LOCAL_FS ? "/" : fs;
+  const rootTarget = underHome ? homePath : "";
+  const rest = underHome ? path.slice(homePath.length).replace(/^\//, "") : path;
+  const segments = rest ? rest.split("/") : [];
+  const prefix = underHome ? homePath : "";
   return (
     <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-0.5 text-xs">
       <button
         className="hover:text-foreground shrink-0 font-medium transition-colors"
-        onClick={() => onNavigate("")}
+        onClick={() => onNavigate(rootTarget)}
       >
-        {fs === LOCAL_FS ? "Local" : fs}
+        {rootLabel}
       </button>
       {segments.map((seg, i) => (
         <span key={i} className="flex items-center gap-0.5">
           <ChevronRight className="size-3 shrink-0" />
           <button
             className="hover:text-foreground max-w-40 truncate transition-colors"
-            onClick={() => onNavigate(segments.slice(0, i + 1).join("/"))}
+            onClick={() =>
+              onNavigate([prefix, segments.slice(0, i + 1).join("/")].filter(Boolean).join("/"))
+            }
           >
             {seg}
           </button>
@@ -100,6 +114,13 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
   const setFs = useBrowserStore((s) => s.setFs);
   const setPath = useBrowserStore((s) => s.setPath);
   const setActive = useBrowserStore((s) => s.setActive);
+  const homePath = useBrowserStore((s) => s.homePath);
+
+  const pickLocalFolder = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const dir = await open({ directory: true, multiple: false });
+    if (typeof dir === "string") setPath(index, absoluteToLocalPath(dir));
+  };
 
   const queryClient = useQueryClient();
   const listing = useListing(pane.fs, pane.path);
@@ -171,9 +192,58 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
           </SelectContent>
         </Select>
         {pane.fs && (
-          <Breadcrumb fs={pane.fs} path={pane.path} onNavigate={(p) => setPath(index, p)} />
+          <Breadcrumb
+            fs={pane.fs}
+            path={pane.path}
+            homePath={homePath}
+            onNavigate={(p) => setPath(index, p)}
+          />
         )}
         <div className="ml-auto flex items-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Parent folder"
+                disabled={!pane.fs || pane.path === ""}
+                onClick={() => setPath(index, parentPath(pane.path))}
+              >
+                <ArrowUp />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Up</TooltipContent>
+          </Tooltip>
+          {pane.fs === LOCAL_FS && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Home folder"
+                    onClick={() => setPath(index, homePath)}
+                  >
+                    <Home />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Home</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Choose folder"
+                    onClick={() => void pickLocalFolder()}
+                  >
+                    <FolderOpen />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Choose folder…</TooltipContent>
+              </Tooltip>
+            </>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
