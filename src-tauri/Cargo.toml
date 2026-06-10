@@ -28,6 +28,7 @@ which = "7"
 fs4 = "0.13"
 tauri-plugin-store = "2.4.3"
 tauri-plugin-dialog = "2.7.1"
+tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["time", "macros", "rt-multi-thread"] }

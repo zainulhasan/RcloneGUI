@@ -63,6 +63,12 @@ export function useJobCompletionWatcher() {
             if (status.success) {
               toast.success(`${job.kind} finished`, { description: job.label });
               logActivity("info", "operation", `Job ${job.jobid} (${job.label}) finished`);
+              if (job.kind === "watch" && job.meta) {
+                void import("@/features/media/watch-actions").then((m) =>
+                  m.handleWatchSyncComplete(job.meta as never),
+                );
+                void queryClient.invalidateQueries({ queryKey: ["media"] });
+              }
             } else {
               toast.error(`${job.kind} failed`, { description: status.error || job.label });
               logActivity(
