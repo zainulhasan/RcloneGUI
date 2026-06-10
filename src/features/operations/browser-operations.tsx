@@ -4,6 +4,7 @@ import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-m
 import { BrowserView } from "@/features/browser/browser-view";
 import type { RcListItem } from "@/lib/rc-client";
 import { useBrowserStore } from "@/store/browser";
+import { useSettingsStore } from "@/store/settings";
 
 import { DeleteDialog } from "./delete-dialog";
 import { OperationDialog, type OperationDialogState } from "./operation-dialog";
@@ -21,6 +22,12 @@ export function BrowserWithOperations({
 }) {
   const panes = useBrowserStore((s) => s.panes);
   const active = useBrowserStore((s) => s.active);
+  const settings = useSettingsStore((s) => s.settings);
+  const flagDefaults = {
+    transfers: settings.defaultTransfers?.toString() ?? "",
+    checkers: settings.defaultCheckers?.toString() ?? "",
+    bwLimit: settings.defaultBwLimit ?? "",
+  };
   const [operation, setOperation] = useState<OperationDialogState | null>(null);
   const [deleting, setDeleting] = useState<Omit<DeleteRequest, "dryRun"> | null>(null);
 
@@ -85,6 +92,7 @@ export function BrowserWithOperations({
       <OperationDialog
         key={operation ? `${operation.kind}-${operation.source.srcFs}` : "op"}
         state={operation}
+        defaults={flagDefaults}
         onClose={() => setOperation(null)}
       />
       <DeleteDialog
