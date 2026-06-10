@@ -17,6 +17,7 @@ pub fn run() {
             commands::daemon_start,
             commands::daemon_stop,
             commands::daemon_status,
+            commands::daemon_logs,
             commands::rc_call,
             commands::disk_free,
         ])

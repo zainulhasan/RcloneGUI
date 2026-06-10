@@ -106,6 +106,13 @@ pub async fn rc_call(
     proxy::rc_call(port, &method, params).await
 }
 
+/// Captured daemon log lines (rclone writes its log to stderr).
+#[tauri::command]
+pub fn daemon_logs(state: State<'_, DaemonState>) -> Vec<String> {
+    let guard = state.0.lock().expect("daemon state poisoned");
+    guard.as_ref().map(|h| h.logs()).unwrap_or_default()
+}
+
 /// Free disk space (bytes) on the filesystem containing `path`.
 #[tauri::command]
 pub fn disk_free(path: String) -> Result<u64, String> {

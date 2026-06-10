@@ -1,13 +1,19 @@
-use std::io;
+use std::collections::VecDeque;
+use std::io::{self, BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
+
+/// Maximum daemon log lines kept in memory.
+const LOG_CAPACITY: usize = 2000;
 
 /// A running rclone `rcd` daemon (or, in tests, any child process).
 pub struct DaemonHandle {
     child: Child,
     pub port: u16,
+    logs: Arc<Mutex<VecDeque<String>>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -20,6 +26,14 @@ pub struct DaemonStatus {
 impl DaemonHandle {
     pub fn pid(&self) -> u32 {
         self.child.id()
+    }
+
+    /// Captured stderr lines (rclone logs to stderr), oldest first.
+    pub fn logs(&self) -> Vec<String> {
+        self.logs
+            .lock()
+            .map(|l| l.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// True while the child has not exited.
@@ -52,18 +66,36 @@ pub fn rcd_args(port: u16) -> Vec<String> {
         "rcd".into(),
         "--rc-no-auth".into(),
         format!("--rc-addr=127.0.0.1:{port}"),
+        "--log-level".into(),
+        "INFO".into(),
     ]
 }
 
 /// Spawn an arbitrary command as a managed daemon. Used directly by tests;
 /// production code goes through [`spawn_daemon`].
 pub fn spawn_command(command: &mut Command, port: u16) -> io::Result<DaemonHandle> {
-    let child = command
+    let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()?;
-    Ok(DaemonHandle { child, port })
+
+    let logs = Arc::new(Mutex::new(VecDeque::new()));
+    if let Some(stderr) = child.stderr.take() {
+        let sink = Arc::clone(&logs);
+        std::thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                if let Ok(mut buffer) = sink.lock() {
+                    if buffer.len() >= LOG_CAPACITY {
+                        buffer.pop_front();
+                    }
+                    buffer.push_back(line);
+                }
+            }
+        });
+    }
+
+    Ok(DaemonHandle { child, port, logs })
 }
 
 /// Spawn `rclone rcd --rc-no-auth --rc-addr=127.0.0.1:<port>`.
@@ -102,8 +134,33 @@ mod tests {
     fn rcd_args_shape() {
         assert_eq!(
             rcd_args(5572),
-            vec!["rcd", "--rc-no-auth", "--rc-addr=127.0.0.1:5572"]
+            vec![
+                "rcd",
+                "--rc-no-auth",
+                "--rc-addr=127.0.0.1:5572",
+                "--log-level",
+                "INFO"
+            ]
         );
+    }
+
+    #[test]
+    fn captures_stderr_lines() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "echo one >&2; echo two >&2; sleep 30"]);
+        let mut daemon = spawn_command(&mut cmd, 0).unwrap();
+        // The reader thread needs a moment to drain the pipe.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let logs = daemon.logs();
+            if logs.len() >= 2 {
+                assert_eq!(logs, vec!["one", "two"]);
+                break;
+            }
+            assert!(std::time::Instant::now() < deadline, "logs never arrived");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        daemon.stop().unwrap();
     }
 
     #[test]
