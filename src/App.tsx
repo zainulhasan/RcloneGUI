@@ -3,8 +3,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { DaemonGate } from "@/features/health/daemon-gate";
-import { BrowserView } from "@/features/browser/browser-view";
+import { BrowserWithOperations } from "@/features/operations/browser-operations";
+import { LogsView } from "@/features/logs/logs-view";
+import { MountsView } from "@/features/mounts/mounts-view";
 import { RemotesView } from "@/features/remotes/remotes-view";
+import { SchedulerView } from "@/features/scheduler/scheduler-view";
+import { useSchedulerRunner } from "@/features/scheduler/use-scheduler-runner";
+import { SettingsView } from "@/features/settings/settings-view";
+import { TransfersView } from "@/features/transfers/transfers-view";
+import { useJobCompletionWatcher } from "@/features/transfers/use-transfers";
 import { useNavigationStore, type View } from "@/store/navigation";
 
 const queryClient = new QueryClient({
@@ -43,10 +50,27 @@ function CurrentView() {
     case "remotes":
       return <RemotesView />;
     case "browser":
-      return <BrowserView />;
+      return <BrowserWithOperations />;
+    case "transfers":
+      return <TransfersView />;
+    case "mounts":
+      return <MountsView />;
+    case "scheduler":
+      return <SchedulerView />;
+    case "logs":
+      return <LogsView />;
+    case "settings":
+      return <SettingsView />;
     default:
       return <Placeholder view={view} />;
   }
+}
+
+/** Hooks that must run for the whole app session, inside the daemon gate. */
+function BackgroundServices() {
+  useJobCompletionWatcher();
+  useSchedulerRunner();
+  return null;
 }
 
 function App() {
@@ -54,6 +78,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
         <DaemonGate>
+          <BackgroundServices />
           <AppShell>
             <CurrentView />
           </AppShell>
