@@ -120,12 +120,26 @@ describe("RcClient command shaping", () => {
     });
   });
 
-  it("mount forwards mount options", async () => {
+  it("mount forwards mount and vfs options, omitting empties", async () => {
     const { transport, calls } = stubTransport({});
-    await new RcClient(transport).mount("gdrive:", "/mnt/gdrive", { AllowOther: true });
+    const client = new RcClient(transport);
+    await client.mount("gdrive:", "/mnt/gdrive", {
+      mountOpt: { VolumeName: "GDrive" },
+      vfsOpt: { CacheMode: "full", CacheMaxSize: "10G" },
+    });
+    await client.mount("s3:", "/mnt/s3", { mountOpt: {}, vfsOpt: {} });
     expect(calls[0]).toEqual({
       method: "mount/mount",
-      params: { fs: "gdrive:", mountPoint: "/mnt/gdrive", mountOpt: { AllowOther: true } },
+      params: {
+        fs: "gdrive:",
+        mountPoint: "/mnt/gdrive",
+        mountOpt: { VolumeName: "GDrive" },
+        vfsOpt: { CacheMode: "full", CacheMaxSize: "10G" },
+      },
+    });
+    expect(calls[1]).toEqual({
+      method: "mount/mount",
+      params: { fs: "s3:", mountPoint: "/mnt/s3" },
     });
   });
 

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatBytes, formatDateTime } from "@/lib/format";
+import { EmptyState, PageHeader } from "@/components/layout/page";
 import type { MediaItem } from "./types";
 import { LibraryView } from "./library-view";
 import { runCleanupNow } from "./use-cleanup-runner";
@@ -50,12 +51,11 @@ function WatchList() {
 
   if (items.length === 0) {
     return (
-      <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16">
-        <Clapperboard className="size-8" />
-        <p className="text-sm">
-          Nothing here yet. Right-click a file in the Browser and choose “Watch”.
-        </p>
-      </div>
+      <EmptyState
+        icon={Clapperboard}
+        title="Nothing here yet"
+        hint="Right-click a file in the Browser and choose “Watch” to sync it locally."
+      />
     );
   }
 
@@ -200,24 +200,27 @@ export function MediaView() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Media</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={cleaning}
-          onClick={() => {
-            setCleaning(true);
-            void runCleanupNow()
-              .then((n) => {
-                if (n === 0) toast.info("Nothing to clean up.");
-              })
-              .finally(() => setCleaning(false));
-          }}
-        >
-          {cleaning ? <Check /> : <BrushCleaning />} Run cleanup now
-        </Button>
-      </div>
+      <PageHeader
+        title="Media"
+        description="Watch & Auto-Clean: sync, watch in your player, clean up after."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={cleaning}
+            onClick={() => {
+              setCleaning(true);
+              void runCleanupNow()
+                .then((n) => {
+                  if (n === 0) toast.info("Nothing to clean up.");
+                })
+                .finally(() => setCleaning(false));
+            }}
+          >
+            {cleaning ? <Check /> : <BrushCleaning />} Run cleanup now
+          </Button>
+        }
+      />
 
       <Tabs defaultValue="watchlist">
         <TabsList>

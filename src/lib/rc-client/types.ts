@@ -117,12 +117,15 @@ export interface RcRemotesList {
 export interface RcProviderOption {
   Name: string;
   Help: string;
+  /** Comma list (optionally "!"-negated) of sub-providers this applies to. */
   Provider: string;
   Default: unknown;
   Value: unknown;
   Required: boolean;
   IsPassword: boolean;
   Advanced: boolean;
+  /** Non-zero when the option should not be shown in config UIs. */
+  Hide?: number;
   Type: string;
   Examples?: { Value: string; Help: string; Provider: string }[];
 }
