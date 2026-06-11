@@ -99,6 +99,10 @@ test("navigates to Remotes and Settings without errors", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Remotes" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add remote" })).toBeVisible();
 
+  await page.getByRole("button", { name: "Serve", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Serve" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start sharing" })).toBeVisible();
+
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await expect(page.getByText("rclone binary path")).toBeVisible();

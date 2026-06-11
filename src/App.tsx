@@ -15,6 +15,8 @@ import { useBackgroundMode, useTrayStatus } from "@/features/background/use-back
 import { MountsView } from "@/features/mounts/mounts-view";
 import { RemotesView } from "@/features/remotes/remotes-view";
 import { SchedulerView } from "@/features/scheduler/scheduler-view";
+import { ServeView } from "@/features/serve/serve-view";
+import { useAutoServes } from "@/features/serve/use-serves";
 import { useSchedulerRunner } from "@/features/scheduler/use-scheduler-runner";
 import { SettingsView } from "@/features/settings/settings-view";
 import { TransfersView } from "@/features/transfers/transfers-view";
@@ -38,6 +40,7 @@ const VIEW_TITLES: Record<View, string> = {
   browser: "Browser",
   transfers: "Transfers",
   mounts: "Mounts",
+  serve: "Serve",
   scheduler: "Scheduler",
   media: "Media",
   logs: "Logs",
@@ -73,6 +76,8 @@ function CurrentView() {
       return <TransfersView />;
     case "mounts":
       return <MountsView />;
+    case "serve":
+      return <ServeView />;
     case "scheduler":
       return <SchedulerView />;
     case "logs":
@@ -92,6 +97,7 @@ function BackgroundServices() {
   useLaunchUpdateCheck();
   useHomeInit();
   useAutoMounts();
+  useAutoServes();
   useBackgroundMode();
   useTrayStatus();
   return null;

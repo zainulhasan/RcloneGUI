@@ -242,6 +242,20 @@ export class RcClient {
     });
   }
 
+  /**
+   * Run an rclone CLI command inside the daemon as an async job (used for
+   * long-running `serve` processes; stop with jobStop).
+   */
+  command(command: string, arg: string[], opt: Record<string, string>): Promise<RcAsyncJob> {
+    return this.call("core/command", {
+      command,
+      arg,
+      opt,
+      returnType: "STREAM_ONLY_STDERR",
+      _async: true,
+    });
+  }
+
   // ── jobs ──────────────────────────────────────────────────────────────
 
   jobStatus(jobid: number): Promise<RcJobStatus> {

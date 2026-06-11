@@ -8,6 +8,7 @@ import {
   Home,
   Moon,
   ScrollText,
+  Share2,
   Server,
   Settings,
   Sun,
@@ -52,6 +53,7 @@ const NAV_SECTIONS: { label: string | null; items: NavItem[] }[] = [
       { view: "browser", label: "Browser", icon: FolderTree },
       { view: "transfers", label: "Transfers", icon: ArrowLeftRight },
       { view: "mounts", label: "Mounts", icon: HardDrive },
+      { view: "serve", label: "Serve", icon: Share2 },
     ],
   },
   {
@@ -73,6 +75,7 @@ const VIEW_TITLES: Record<View, string> = {
   browser: "Browser",
   transfers: "Transfers",
   mounts: "Mounts",
+  serve: "Serve",
   scheduler: "Scheduler",
   media: "Media",
   logs: "Logs",

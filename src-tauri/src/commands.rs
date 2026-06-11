@@ -131,3 +131,34 @@ pub fn daemon_logs(state: State<'_, DaemonState>) -> Vec<String> {
 pub fn disk_free(path: String) -> Result<u64, String> {
     disk::available_space(Path::new(&path)).map_err(|e| e.to_string())
 }
+
+/// The machine's LAN IPv4 (UDP-connect trick; no packets are sent).
+#[tauri::command]
+pub fn lan_ip() -> Option<String> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    Some(socket.local_addr().ok()?.ip().to_string())
+}
+
+/// A currently-free TCP port (for serve's "auto" port button).
+#[tauri::command]
+pub fn free_port() -> Result<u16, String> {
+    port::pick_free_port().map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lan_ip_is_a_parseable_ipv4_when_available() {
+        if let Some(ip) = lan_ip() {
+            assert!(ip.parse::<std::net::Ipv4Addr>().is_ok(), "got {ip}");
+        }
+    }
+
+    #[test]
+    fn free_port_returns_nonzero() {
+        assert!(free_port().unwrap() > 0);
+    }
+}
