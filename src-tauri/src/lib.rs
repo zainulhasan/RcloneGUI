@@ -54,10 +54,12 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .run(|app_handle, event| match event {
             // Make sure the rclone daemon never outlives the app.
-            if let tauri::RunEvent::Exit = event {
-                app_handle.state::<DaemonState>().shutdown();
-            }
+            tauri::RunEvent::Exit => app_handle.state::<DaemonState>().shutdown(),
+            // macOS: clicking the Dock icon reopens the hidden window.
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => background::show_main_window(app_handle),
+            _ => {}
         });
 }

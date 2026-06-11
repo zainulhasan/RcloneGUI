@@ -1,6 +1,6 @@
 [package]
 name = "rclone-gui"
-version = "0.1.0"
+version = "0.2.0"
 description = "A polished cross-platform desktop GUI for rclone"
 authors = ["RcloneGUI contributors"]
 edition = "2021"

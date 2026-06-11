@@ -23,16 +23,16 @@ Competitive notes vs [rclone-ui/rclone-ui](https://github.com/rclone-ui/rclone-u
 - ✅ **Prod-grade shell** — official shadcn Sidebar (collapsible icon rail, grouped nav,
   topbar), redesigned dashboard/transfers/browser, Inter, dark mode, screenshot-reviewed.
 
-## v0.2 — "Always there" (background presence)
+## v0.2 — "Always there" (background presence) — SHIPPED
 
 The biggest functional gap vs rclone-ui: everything stops when the window closes.
 
-1. **System tray** (tauri tray API) — live transfer summary in the menu, quick mount/unmount of
+1. ✅ **System tray** (tauri tray API) — live transfer summary in the menu, quick mount/unmount of
    saved mounts, pause/resume bandwidth, Open / Quit. Closing the window hides to tray instead
    of exiting (setting-controlled).
-2. **Launch at login** — `tauri-plugin-autostart` toggle in Settings; combined with auto-mounts
+2. ✅ **Launch at login** — `tauri-plugin-autostart` toggle in Settings; combined with auto-mounts
    and the tray, mounts and schedules survive reboots without the window ever opening.
-3. **Scheduler reliability banner** — surface "jobs run only while RcloneGUI is running" with a
+3. ✅ **Scheduler reliability banner** — surface "jobs run only while RcloneGUI is running" with a
    one-click enable of tray+autostart.
 
 ## v0.3 — Browser power features (found in the app walkthrough)
