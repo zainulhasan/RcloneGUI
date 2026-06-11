@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { rc } from "@/lib/rc-client";
 import { formatBytes, formatEta, formatSpeed } from "@/lib/format";
 import { useJobsStore, type TrackedJob } from "@/store/jobs";
 
+import { HistoryTab } from "./history-tab";
 import { Sparkline } from "./sparkline";
 import { SPARKLINE_SAMPLES, useCoreStats, useJobStats, useSpeedSamples } from "./use-transfers";
 
@@ -153,39 +155,51 @@ export function TransfersView() {
         }
       />
 
-      <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex items-stretch">
-          <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
-            <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-              Current speed
-            </span>
-            <span className="text-3xl font-semibold tracking-tight tabular-nums">
-              {formatSpeed(stats.data?.speed ?? 0)}
-            </span>
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {formatBytes(stats.data?.bytes ?? 0)} transferred · {stats.data?.transfers ?? 0} files
-              {(stats.data?.errors ?? 0) > 0 && (
-                <span className="text-destructive"> · {stats.data?.errors} errors</span>
-              )}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1 self-end" aria-hidden>
-            <div className="h-20">
-              <Sparkline samples={samples} capacity={SPARKLINE_SAMPLES} />
+      <Tabs defaultValue="active">
+        <TabsList>
+          <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active" className="flex flex-col gap-4">
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="flex items-stretch">
+              <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
+                <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+                  Current speed
+                </span>
+                <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                  {formatSpeed(stats.data?.speed ?? 0)}
+                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {formatBytes(stats.data?.bytes ?? 0)} transferred · {stats.data?.transfers ?? 0}{" "}
+                  files
+                  {(stats.data?.errors ?? 0) > 0 && (
+                    <span className="text-destructive"> · {stats.data?.errors} errors</span>
+                  )}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1 self-end" aria-hidden>
+                <div className="h-20">
+                  <Sparkline samples={samples} capacity={SPARKLINE_SAMPLES} />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Card>
+          </Card>
 
-      {activeJobs.length === 0 ? (
-        <EmptyState
-          icon={ArrowDownUp}
-          title="No transfers yet"
-          hint="Right-click files in the Browser to copy, sync or move them."
-        />
-      ) : (
-        activeJobs.map((job) => <JobCard key={job.jobid} job={job} />)
-      )}
+          {activeJobs.length === 0 ? (
+            <EmptyState
+              icon={ArrowDownUp}
+              title="No transfers yet"
+              hint="Right-click files in the Browser to copy, sync or move them."
+            />
+          ) : (
+            activeJobs.map((job) => <JobCard key={job.jobid} job={job} />)
+          )}
+        </TabsContent>
+        <TabsContent value="history">
+          <HistoryTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
