@@ -31,11 +31,14 @@ function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-/** Tauri plugin errors arrive as plain strings, not Error objects. */
+/**
+ * Tauri plugin errors arrive as plain strings, not Error objects — and a
+ * call interrupted by a reload rejects with `undefined`.
+ */
 function errorText(err: unknown): string {
-  if (typeof err === "string") return err;
-  if (err instanceof Error) return err.message;
-  return String(err);
+  if (typeof err === "string" && err.trim()) return err;
+  if (err instanceof Error && err.message) return err.message;
+  return "The check was interrupted — please try again.";
 }
 
 /**
