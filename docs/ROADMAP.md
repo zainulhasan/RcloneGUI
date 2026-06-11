@@ -35,14 +35,14 @@ The biggest functional gap vs rclone-ui: everything stops when the window closes
 3. ✅ **Scheduler reliability banner** — surface "jobs run only while RcloneGUI is running" with a
    one-click enable of tray+autostart.
 
-## v0.3 — Browser power features (found in the app walkthrough)
+## v0.3 — Browser power features — SHIPPED
 
-4. **Rename** (operations/movefile within the same dir) and **double-click to open** local
+4. ✅ **Rename** (operations/movefile within the same dir) and **double-click to open** local
    files with the OS default app.
-5. **Pane filter** — type-to-filter the current listing (big folders are painful today).
-6. **Remote usage on Remotes page** — `operations/about` per remote: used/free with a small
+5. ✅ **Pane filter** — type-to-filter the current listing (big folders are painful today).
+6. ✅ **Remote usage on Remotes page** — `operations/about` per remote: used/free with a small
    bar, where the backend supports it.
-7. **Persistent transfer history** — keep finished jobs (status, bytes, duration) in SQLite so
+7. ✅ **Persistent transfer history** — keep finished jobs (status, bytes, duration) in SQLite so
    the Transfers page has a History tab that survives restarts.
 
 ## v0.4 — Power workflows
