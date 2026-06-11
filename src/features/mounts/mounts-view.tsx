@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field } from "@/components/layout/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -127,9 +127,13 @@ export function MountsView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex items-end gap-2">
-            <div className="flex w-44 flex-col gap-1.5">
-              <Label htmlFor="mount-remote">Remote</Label>
+          <div className="flex items-start gap-3">
+            <Field
+              label="Remote"
+              htmlFor="mount-remote"
+              help="Which configured remote to attach as a drive."
+              className="w-44"
+            >
               <Select value={fs || undefined} onValueChange={setFs}>
                 <SelectTrigger id="mount-remote" className="w-full">
                   <SelectValue placeholder="Choose…" />
@@ -142,9 +146,13 @@ export function MountsView() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="mount-point">Mount point</Label>
+            </Field>
+            <Field
+              label="Mount point"
+              htmlFor="mount-point"
+              help="An empty local folder where the remote will appear. Pick or type a path."
+              className="flex-1"
+            >
               <div className="flex gap-2">
                 <Input
                   id="mount-point"
@@ -163,12 +171,16 @@ export function MountsView() {
                   <FolderOpen />
                 </Button>
               </div>
-            </div>
+            </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cache-mode">Cache mode</Label>
+          <div className="grid grid-cols-2 items-start gap-x-4 gap-y-3 lg:grid-cols-4">
+            <Field
+              label="Cache mode"
+              htmlFor="cache-mode"
+              help="How much the mount caches on local disk. 'writes' is the safe default; 'full' also caches reads — best for streaming video or apps that seek a lot; 'off' streams directly but some apps can't save or seek."
+              hint={CACHE_MODE_HELP[options.cacheMode]}
+            >
               <Select
                 value={options.cacheMode}
                 onValueChange={(v) =>
@@ -185,35 +197,43 @@ export function MountsView() {
                   <SelectItem value="full">full</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-muted-foreground text-xs">{CACHE_MODE_HELP[options.cacheMode]}</p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cache-max-size">Cache max size</Label>
+            </Field>
+            <Field
+              label="Cache max size"
+              htmlFor="cache-max-size"
+              help="Cap for the on-disk cache, e.g. 10G or 500M. When the cache grows past this, the least-recently-used files are evicted. Empty = unlimited."
+            >
               <Input
                 id="cache-max-size"
-                placeholder="10G (empty = unlimited)"
+                placeholder="e.g. 10G — empty = unlimited"
                 value={options.cacheMaxSize}
                 onChange={(e) => setOptions({ ...options, cacheMaxSize: e.target.value })}
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cache-max-age">Cache max age</Label>
+            </Field>
+            <Field
+              label="Cache max age"
+              htmlFor="cache-max-age"
+              help="How long cached files are kept since last use, e.g. 1h, 24h, 7d. Older entries are removed. Empty = rclone's default (1h)."
+            >
               <Input
                 id="cache-max-age"
-                placeholder="1h, 24h, 7d…"
+                placeholder="e.g. 24h — empty = default"
                 value={options.cacheMaxAge}
                 onChange={(e) => setOptions({ ...options, cacheMaxAge: e.target.value })}
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="volume-name">Volume name</Label>
+            </Field>
+            <Field
+              label="Volume name"
+              htmlFor="volume-name"
+              help="The drive name shown in Finder / Explorer. Optional — defaults to the remote's name."
+            >
               <Input
                 id="volume-name"
                 placeholder="optional"
                 value={options.volumeName}
                 onChange={(e) => setOptions({ ...options, volumeName: e.target.value })}
               />
-            </div>
+            </Field>
           </div>
 
           <div className="flex items-center gap-6">

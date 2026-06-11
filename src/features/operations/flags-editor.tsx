@@ -1,3 +1,4 @@
+import { Field } from "@/components/layout/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -33,9 +34,12 @@ export function FlagsEditor({ value, onChange, hideDryRun }: FlagsEditorProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-transfers">Transfers</Label>
+      <div className="grid grid-cols-3 items-start gap-2">
+        <Field
+          label="Transfers"
+          htmlFor="flag-transfers"
+          help="How many files transfer in parallel. Higher = faster for many small files; lower is gentler on slow connections. rclone default: 4."
+        >
           <Input
             id="flag-transfers"
             inputMode="numeric"
@@ -43,9 +47,12 @@ export function FlagsEditor({ value, onChange, hideDryRun }: FlagsEditorProps) {
             value={value.transfers}
             onChange={(e) => patch({ transfers: e.target.value })}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-checkers">Checkers</Label>
+        </Field>
+        <Field
+          label="Checkers"
+          htmlFor="flag-checkers"
+          help="How many files are compared in parallel to decide what needs copying. rclone default: 8."
+        >
           <Input
             id="flag-checkers"
             inputMode="numeric"
@@ -53,21 +60,27 @@ export function FlagsEditor({ value, onChange, hideDryRun }: FlagsEditorProps) {
             value={value.checkers}
             onChange={(e) => patch({ checkers: e.target.value })}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-bwlimit">Bandwidth</Label>
+        </Field>
+        <Field
+          label="Bandwidth"
+          htmlFor="flag-bwlimit"
+          help="Speed cap for this operation, e.g. 10M (10 MiB/s) or 1M:100k for separate up:down limits. Empty = unlimited."
+        >
           <Input
             id="flag-bwlimit"
             placeholder="10M / off"
             value={value.bwLimit}
             onChange={(e) => patch({ bwLimit: e.target.value })}
           />
-        </div>
+        </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-include">Include rules</Label>
+        <Field
+          label="Include rules"
+          htmlFor="flag-include"
+          help="Only transfer matching files — one pattern per line. * matches within a folder, ** crosses folders. Example: *.mkv transfers only mkv files."
+        >
           <Textarea
             id="flag-include"
             rows={3}
@@ -76,9 +89,12 @@ export function FlagsEditor({ value, onChange, hideDryRun }: FlagsEditorProps) {
             value={value.include}
             onChange={(e) => patch({ include: e.target.value })}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-exclude">Exclude rules</Label>
+        </Field>
+        <Field
+          label="Exclude rules"
+          htmlFor="flag-exclude"
+          help="Skip matching files — one pattern per line. Useful for temp files: *.tmp, .DS_Store, node_modules/**."
+        >
           <Textarea
             id="flag-exclude"
             rows={3}
@@ -87,28 +103,34 @@ export function FlagsEditor({ value, onChange, hideDryRun }: FlagsEditorProps) {
             value={value.exclude}
             onChange={(e) => patch({ exclude: e.target.value })}
           />
-        </div>
+        </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-min-size">Min size</Label>
+        <Field
+          label="Min size"
+          htmlFor="flag-min-size"
+          help="Skip files smaller than this, e.g. 100M. Handy to ignore thumbnails and metadata files."
+        >
           <Input
             id="flag-min-size"
             placeholder="100M"
             value={value.minSize}
             onChange={(e) => patch({ minSize: e.target.value })}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="flag-max-size">Max size</Label>
+        </Field>
+        <Field
+          label="Max size"
+          htmlFor="flag-max-size"
+          help="Skip files larger than this, e.g. 50G. Protects against accidentally syncing huge files."
+        >
           <Input
             id="flag-max-size"
             placeholder="50G"
             value={value.maxSize}
             onChange={(e) => patch({ maxSize: e.target.value })}
           />
-        </div>
+        </Field>
       </div>
     </div>
   );
