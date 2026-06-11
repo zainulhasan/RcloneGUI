@@ -73,6 +73,10 @@ function fakeDb() {
         const [fs, path] = params as [string, string];
         const row = rows.find((r) => r.remote_fs === fs && r.remote_path === path);
         if (row) row.watched_at = null;
+      } else if (sql.includes("SET remote_path")) {
+        const [fs, oldPath, newPath] = params as [string, string, string];
+        const row = rows.find((r) => r.remote_fs === fs && r.remote_path === oldPath);
+        if (row) row.remote_path = newPath;
       } else if (sql.includes("SET local_deleted_at")) {
         const [id, now] = params as [number, number];
         const row = rows.find((r) => r.id === id);
@@ -134,6 +138,14 @@ describe("WatchedDb", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].synced_at).toBe(2000);
     expect(rows[0].local_deleted_at).toBeNull();
+  });
+
+  it("updateRemotePath moves the key so badges survive renames", async () => {
+    const { executor, rows } = fakeDb();
+    const db = new WatchedDb(executor);
+    await db.markWatched("gdrive:", "films/old.mkv");
+    await db.updateRemotePath("gdrive:", "films/old.mkv", "films/new.mkv");
+    expect(rows[0].remote_path).toBe("films/new.mkv");
   });
 
   it("markWatched works for items never synced (badge-only)", async () => {
