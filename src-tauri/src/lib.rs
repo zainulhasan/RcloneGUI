@@ -58,6 +58,7 @@ pub fn run() {
             // Make sure the rclone daemon never outlives the app.
             tauri::RunEvent::Exit => app_handle.state::<DaemonState>().shutdown(),
             // macOS: clicking the Dock icon reopens the hidden window.
+            #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => background::show_main_window(app_handle),
             _ => {}
         });
