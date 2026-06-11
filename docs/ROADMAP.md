@@ -45,13 +45,13 @@ The biggest functional gap vs rclone-ui: everything stops when the window closes
 7. ✅ **Persistent transfer history** — keep finished jobs (status, bytes, duration) in SQLite so
    the Transfers page has a History tab that survives restarts.
 
-## v0.4 — Power workflows
+## v0.4 — Power workflows — SHIPPED
 
-8. **Connect to a remote rclone daemon** — Settings → hosts (host/port/user/pass); manage a NAS
+8. ✅ **Connect to a remote rclone daemon** — Settings → hosts (host/port/user/pass); manage a NAS
    or server rcd alongside the local one. rclone-ui's strongest power feature.
-9. **Operation presets/templates** — save a configured copy/sync (src/dst/flags), rerun in one
+9. ✅ **Operation presets/templates** — save a configured copy/sync (src/dst/flags), rerun in one
    click, convert to a scheduled job.
-10. **Serve manager** — start/stop `rclone serve` (http/webdav/dlna/smb) per remote, showing
+10. ✅ **Serve manager** — start/stop `rclone serve` (http/webdav/dlna/smb) per remote, showing
     the LAN URL for media players.
 
 ## Later
