@@ -43,6 +43,11 @@ vi.mock("@tauri-apps/api/core", () => ({
         return 250 * 1024 ** 3;
       case "rc_call":
         return {};
+      case "set_hide_on_close":
+      case "tray_status":
+        return null;
+      case "plugin:autostart|is_enabled":
+        return false;
       default:
         return null;
     }
