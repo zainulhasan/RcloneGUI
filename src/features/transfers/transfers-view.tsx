@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { rc } from "@/lib/rc-client";
 import { formatBytes, formatEta, formatSpeed } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useJobsStore, type TrackedJob } from "@/store/jobs";
 
 import { HistoryTab } from "./history-tab";
@@ -93,7 +94,11 @@ function JobCard({ job }: { job: TrackedJob }) {
         ) : (
           <>
             <div className="flex items-center gap-3">
-              <Progress value={pct} className="flex-1" aria-label="Job progress" />
+              <Progress
+                value={pct}
+                className="flex-1 [&>[data-slot=progress-indicator]]:barberpole"
+                aria-label="Job progress"
+              />
               <span className="text-muted-foreground w-32 shrink-0 text-right text-xs tabular-nums">
                 {formatBytes(bytes)} / {formatBytes(totalBytes)}
               </span>
@@ -164,7 +169,15 @@ export function TransfersView() {
           <Card className="gap-0 overflow-hidden py-0">
             <div className="flex items-stretch">
               <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
-                <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      (stats.data?.speed ?? 0) > 0
+                        ? "bg-primary pulse-dot"
+                        : "bg-muted-foreground/40",
+                    )}
+                  />
                   Current speed
                 </span>
                 <span className="text-3xl font-semibold tracking-tight tabular-nums">

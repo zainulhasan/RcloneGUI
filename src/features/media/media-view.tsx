@@ -88,7 +88,7 @@ function WatchList() {
               </TableCell>
               <TableCell>
                 <span className="flex gap-1">
-                  {item.watchedAt !== null && <Badge variant="secondary">watched</Badge>}
+                  {item.watchedAt !== null && <Badge variant="watched">watched</Badge>}
                   {item.localPath !== null ? (
                     <Badge variant="outline">local</Badge>
                   ) : item.localDeletedAt !== null ? (

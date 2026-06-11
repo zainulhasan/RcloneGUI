@@ -201,7 +201,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         isActive={view === item.view}
                         tooltip={item.label}
                         onClick={() => navigate(item.view)}
+                        className="relative data-[active=true]:[&>svg]:text-sidebar-primary"
                       >
+                        {view === item.view && (
+                          <span className="bg-sidebar-primary absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full" />
+                        )}
                         <item.icon />
                         <span>{item.label}</span>
                       </SidebarMenuButton>

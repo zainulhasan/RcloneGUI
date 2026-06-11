@@ -1,105 +1,134 @@
 /*
- * RcloneGUI design tokens.
- *
- * Semantic tokens only — components must never reference raw color values.
- * Light theme on :root, dark theme on .dark. See DESIGN.md for usage rules.
+ * RcloneGUI design tokens — "a precision instrument for your files".
+ * Signal-blue accent, cool blue-slate neutrals, layered tinted surfaces
+ * (bg < sidebar < card < popover in dark). From the v2 design system.
+ * Semantic tokens only — components never reference raw color values.
  */
 
 :root {
-  /* Semantic colors */
-  --background: oklch(0.978 0.003 255);
-  --foreground: oklch(0.205 0.01 250);
+  --radius: 0.5rem; /* 8px base — technical, not toy */
+
+  /* surfaces */
+  --background: oklch(0.985 0.0035 255);
+  --foreground: oklch(0.255 0.022 257);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.01 250);
+  --card-foreground: oklch(0.255 0.022 257);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.01 250);
-  --primary: oklch(0.546 0.2 262);
-  --primary-foreground: oklch(0.985 0.002 250);
-  --secondary: oklch(0.955 0.005 250);
-  --secondary-foreground: oklch(0.275 0.01 250);
-  --muted: oklch(0.955 0.005 250);
-  --muted-foreground: oklch(0.5 0.012 250);
-  --accent: oklch(0.945 0.008 252);
-  --accent-foreground: oklch(0.275 0.01 250);
-  --destructive: oklch(0.577 0.215 27);
-  --destructive-foreground: oklch(0.985 0.002 250);
-  --success: oklch(0.6 0.15 155);
-  --success-foreground: oklch(0.985 0.002 250);
-  --warning: oklch(0.74 0.15 80);
-  --warning-foreground: oklch(0.25 0.05 80);
-  --border: oklch(0.91 0.006 250);
-  --input: oklch(0.91 0.006 250);
-  --ring: oklch(0.546 0.2 262);
+  --popover-foreground: oklch(0.255 0.022 257);
 
-  /* Sidebar */
-  --sidebar: oklch(0.962 0.005 255);
-  --sidebar-foreground: oklch(0.305 0.01 250);
-  --sidebar-accent: oklch(0.925 0.008 252);
-  --sidebar-accent-foreground: oklch(0.205 0.01 250);
-  --sidebar-border: oklch(0.91 0.006 250);
-  --sidebar-primary: oklch(0.546 0.2 262);
-  --sidebar-primary-foreground: oklch(0.985 0.002 250);
-  --sidebar-ring: oklch(0.546 0.2 262);
+  /* brand + neutrals */
+  --primary: oklch(0.555 0.205 258); /* signal blue */
+  --primary-foreground: oklch(0.99 0.01 255);
+  --secondary: oklch(0.955 0.006 256);
+  --secondary-foreground: oklch(0.3 0.02 257);
+  --muted: oklch(0.955 0.006 256);
+  --muted-foreground: oklch(0.52 0.018 257);
+  --accent: oklch(0.945 0.012 256);
+  --accent-foreground: oklch(0.28 0.022 257);
 
-  /* Charts */
-  --chart-1: oklch(0.546 0.2 262);
-  --chart-2: oklch(0.6 0.15 155);
-  --chart-3: oklch(0.74 0.15 80);
-  --chart-4: oklch(0.577 0.215 27);
-  --chart-5: oklch(0.62 0.16 300);
+  /* semantic */
+  --destructive: oklch(0.585 0.215 24);
+  --destructive-foreground: oklch(0.99 0.01 25);
+  --success: oklch(0.6 0.145 156);
+  --success-foreground: oklch(0.99 0.01 156);
+  --warning: oklch(0.72 0.155 70);
+  --warning-foreground: oklch(0.27 0.05 70);
 
-  /* Radius scale */
-  --radius: 0.625rem;
+  /* lines + controls */
+  --border: oklch(0.905 0.008 256);
+  --input: oklch(0.9 0.008 256);
+  --ring: oklch(0.555 0.205 258);
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px 0 oklch(0.2 0.01 250 / 0.05);
-  --shadow-sm: 0 1px 3px 0 oklch(0.2 0.01 250 / 0.08), 0 1px 2px -1px oklch(0.2 0.01 250 / 0.08);
-  --shadow-md: 0 4px 6px -1px oklch(0.2 0.01 250 / 0.09), 0 2px 4px -2px oklch(0.2 0.01 250 / 0.09);
-  --shadow-lg: 0 10px 15px -3px oklch(0.2 0.01 250 / 0.1), 0 4px 6px -4px oklch(0.2 0.01 250 / 0.1);
+  /* data viz */
+  --chart-1: oklch(0.555 0.205 258);
+  --chart-2: oklch(0.66 0.15 192);
+  --chart-3: oklch(0.62 0.17 300);
+  --chart-4: oklch(0.7 0.155 70);
+  --chart-5: oklch(0.62 0.16 156);
+
+  /* sidebar */
+  --sidebar: oklch(0.965 0.005 256);
+  --sidebar-foreground: oklch(0.42 0.018 257);
+  --sidebar-primary: oklch(0.555 0.205 258);
+  --sidebar-primary-foreground: oklch(0.99 0.01 255);
+  --sidebar-accent: oklch(0.93 0.012 256);
+  --sidebar-accent-foreground: oklch(0.25 0.02 257);
+  --sidebar-border: oklch(0.9 0.008 256);
+  --sidebar-ring: oklch(0.555 0.205 258);
+
+  /* extensions beyond stock shadcn (used by RcloneGUI recipes) */
+  --surface: oklch(0.972 0.004 255); /* subtle raised fill */
+  --primary-hover: oklch(0.51 0.21 258);
+  --border-strong: oklch(0.855 0.01 256);
+
+  /* shadow scale — cool-tinted, restrained */
+  --shadow-xs: 0 1px 2px 0 oklch(0.25 0.03 257 / 0.05);
+  --shadow-sm: 0 1px 2px 0 oklch(0.25 0.03 257 / 0.06), 0 1px 1px -1px oklch(0.25 0.03 257 / 0.08);
+  --shadow: 0 2px 4px -1px oklch(0.25 0.03 257 / 0.07), 0 1px 2px -1px oklch(0.25 0.03 257 / 0.06);
+  --shadow-md:
+    0 6px 14px -4px oklch(0.25 0.03 257 / 0.1), 0 2px 5px -3px oklch(0.25 0.03 257 / 0.08);
+  --shadow-lg:
+    0 14px 32px -8px oklch(0.22 0.03 257 / 0.16), 0 4px 10px -6px oklch(0.22 0.03 257 / 0.1);
 }
 
 .dark {
-  --background: oklch(0.165 0.01 258);
-  --foreground: oklch(0.93 0.004 250);
-  --card: oklch(0.205 0.012 258);
-  --card-foreground: oklch(0.93 0.004 250);
-  --popover: oklch(0.205 0.012 258);
-  --popover-foreground: oklch(0.93 0.004 250);
-  --primary: oklch(0.66 0.17 262);
-  --primary-foreground: oklch(0.145 0.01 255);
-  --secondary: oklch(0.27 0.01 255);
-  --secondary-foreground: oklch(0.93 0.004 250);
-  --muted: oklch(0.27 0.01 255);
-  --muted-foreground: oklch(0.68 0.01 250);
-  --accent: oklch(0.295 0.012 255);
-  --accent-foreground: oklch(0.93 0.004 250);
-  --destructive: oklch(0.66 0.19 25);
-  --destructive-foreground: oklch(0.145 0.01 255);
-  --success: oklch(0.7 0.14 155);
-  --success-foreground: oklch(0.145 0.01 255);
-  --warning: oklch(0.78 0.14 80);
-  --warning-foreground: oklch(0.185 0.05 80);
-  --border: oklch(0.31 0.01 255);
-  --input: oklch(0.31 0.01 255);
-  --ring: oklch(0.66 0.17 262);
+  /* surfaces — layered: bg < sidebar < card < popover */
+  --background: oklch(0.175 0.0125 260);
+  --foreground: oklch(0.955 0.004 255);
+  --card: oklch(0.214 0.0145 260);
+  --card-foreground: oklch(0.955 0.004 255);
+  --popover: oklch(0.234 0.015 260);
+  --popover-foreground: oklch(0.965 0.004 255);
 
-  --sidebar: oklch(0.185 0.012 258);
-  --sidebar-foreground: oklch(0.85 0.006 250);
-  --sidebar-accent: oklch(0.275 0.012 255);
-  --sidebar-accent-foreground: oklch(0.93 0.004 250);
-  --sidebar-border: oklch(0.27 0.01 255);
-  --sidebar-primary: oklch(0.66 0.17 262);
-  --sidebar-primary-foreground: oklch(0.145 0.01 255);
-  --sidebar-ring: oklch(0.66 0.17 262);
+  /* brand + neutrals */
+  --primary: oklch(0.645 0.185 257); /* lifted for dark */
+  --primary-foreground: oklch(0.16 0.03 258);
+  --secondary: oklch(0.262 0.016 260);
+  --secondary-foreground: oklch(0.93 0.006 255);
+  --muted: oklch(0.262 0.015 260);
+  --muted-foreground: oklch(0.68 0.018 258);
+  --accent: oklch(0.285 0.022 259);
+  --accent-foreground: oklch(0.96 0.005 255);
 
-  --chart-1: oklch(0.66 0.17 262);
-  --chart-2: oklch(0.7 0.14 155);
-  --chart-3: oklch(0.78 0.14 80);
-  --chart-4: oklch(0.66 0.19 25);
-  --chart-5: oklch(0.68 0.14 300);
+  /* semantic */
+  --destructive: oklch(0.635 0.205 23);
+  --destructive-foreground: oklch(0.985 0.01 25);
+  --success: oklch(0.715 0.155 158);
+  --success-foreground: oklch(0.16 0.04 158);
+  --warning: oklch(0.79 0.15 73);
+  --warning-foreground: oklch(0.2 0.05 73);
 
+  /* lines + controls */
+  --border: oklch(0.285 0.014 260);
+  --input: oklch(0.315 0.015 260);
+  --ring: oklch(0.645 0.185 257);
+
+  /* data viz */
+  --chart-1: oklch(0.66 0.18 257);
+  --chart-2: oklch(0.72 0.14 192);
+  --chart-3: oklch(0.69 0.16 300);
+  --chart-4: oklch(0.79 0.15 73);
+  --chart-5: oklch(0.72 0.15 158);
+
+  /* sidebar */
+  --sidebar: oklch(0.193 0.013 260);
+  --sidebar-foreground: oklch(0.72 0.016 258);
+  --sidebar-primary: oklch(0.645 0.185 257);
+  --sidebar-primary-foreground: oklch(0.16 0.03 258);
+  --sidebar-accent: oklch(0.265 0.018 259);
+  --sidebar-accent-foreground: oklch(0.96 0.005 255);
+  --sidebar-border: oklch(0.262 0.014 260);
+  --sidebar-ring: oklch(0.645 0.185 257);
+
+  /* extensions */
+  --surface: oklch(0.205 0.014 260);
+  --primary-hover: oklch(0.695 0.175 257);
+  --border-strong: oklch(0.345 0.016 260);
+
+  /* shadow scale — deeper, near-black on dark */
   --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
-  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.35), 0 1px 2px -1px oklch(0 0 0 / 0.35);
-  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.38), 0 2px 4px -2px oklch(0 0 0 / 0.38);
-  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.4), 0 4px 6px -4px oklch(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.36), 0 1px 1px -1px oklch(0 0 0 / 0.4);
+  --shadow: 0 2px 5px -1px oklch(0 0 0 / 0.4), 0 1px 2px -1px oklch(0 0 0 / 0.36);
+  --shadow-md: 0 8px 18px -6px oklch(0 0 0 / 0.5), 0 3px 7px -4px oklch(0 0 0 / 0.42);
+  --shadow-lg: 0 18px 40px -10px oklch(0 0 0 / 0.62), 0 6px 14px -8px oklch(0 0 0 / 0.48);
 }

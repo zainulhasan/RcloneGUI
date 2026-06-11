@@ -387,7 +387,7 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
           <ContextMenu>
             <ContextMenuTrigger asChild>
               <div>
-                <div className="text-muted-foreground bg-card sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1 text-[10px] font-semibold tracking-wider uppercase">
+                <div className="text-muted-foreground bg-surface sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1 text-[11px] font-semibold tracking-[0.06em] uppercase">
                   <span className="min-w-0 flex-1">Name</span>
                   <span className="w-24 shrink-0 text-right">Modified</span>
                   <span className="w-16 shrink-0 text-right">Size</span>
@@ -428,8 +428,10 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                           }
                         }}
                         className={cn(
-                          "flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-sm select-none",
-                          isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+                          "flex cursor-default items-center gap-2 rounded-md border-l-2 border-transparent px-2 py-1 text-sm select-none",
+                          isSelected
+                            ? "border-primary bg-primary/13 text-foreground"
+                            : "hover:bg-accent/50",
                         )}
                       >
                         {item.IsDir ? (
