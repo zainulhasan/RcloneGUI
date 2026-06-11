@@ -1,11 +1,15 @@
-import { useState } from "react";
-import { CalendarClock, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bookmark, CalendarClock, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setAutostart } from "@/features/background/use-background";
 import { useSettingsStore } from "@/store/settings";
+import { usePresetsStore, type Preset } from "@/store/presets";
+import { useRunOperation } from "@/features/operations/use-operations";
+import { flagsToOptions } from "@/features/operations/flags";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,12 +44,21 @@ import { formatDateTime } from "@/lib/format";
 import { useScheduledJobsStore, newScheduledJob, type ScheduledJob } from "@/store/scheduled-jobs";
 
 import { validateCron } from "./cron";
+import { presetToScheduledJob } from "./preset-utils";
 import { executeScheduledJob } from "./use-scheduler-runner";
 
-function JobDialog({ job, onClose }: { job: ScheduledJob | null; onClose: () => void }) {
+function JobDialog({
+  job,
+  template,
+  onClose,
+}: {
+  job: ScheduledJob | null;
+  template?: ScheduledJob | null;
+  onClose: () => void;
+}) {
   const upsert = useScheduledJobsStore((s) => s.upsert);
   const [draft, setDraft] = useState<ScheduledJob>(
-    job ?? { ...newScheduledJob(), id: crypto.randomUUID() },
+    job ?? template ?? { ...newScheduledJob(), id: crypto.randomUUID() },
   );
 
   const cronError = validateCron(draft.cron);
@@ -149,6 +162,98 @@ function JobDialog({ job, onClose }: { job: ScheduledJob | null; onClose: () => 
   );
 }
 
+function PresetsCard({ onSchedule }: { onSchedule: (template: ScheduledJob) => void }) {
+  const presets = usePresetsStore((s) => s.presets);
+  const removePreset = usePresetsStore((s) => s.remove);
+  const run = useRunOperation();
+
+  if (presets.length === 0) return null;
+
+  const runNow = (p: Preset) => {
+    run.mutate({
+      kind: p.kind,
+      srcFs: p.srcFs,
+      dstFs: p.dstFs,
+      options: flagsToOptions(p.flags),
+      label: `${p.name} (preset)`,
+      resync: p.kind === "bisync" ? false : undefined,
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Bookmark className="text-muted-foreground size-4" />
+          Presets
+        </CardTitle>
+        <CardDescription>Saved transfers — run once or turn into a scheduled job.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableBody>
+            {presets.map((p) => (
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{p.kind}</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground max-w-72 truncate font-mono text-xs">
+                  {p.srcFs} → {p.dstFs}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Run preset ${p.name}`}
+                        onClick={() => runNow(p)}
+                      >
+                        <Play />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Run now</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Schedule preset ${p.name}`}
+                        onClick={() => onSchedule(presetToScheduledJob(p, crypto.randomUUID()))}
+                      >
+                        <CalendarClock />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Schedule…</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete preset ${p.name}`}
+                        onClick={() => {
+                          void removePreset(p.id);
+                          toast.success(`Preset "${p.name}" deleted`);
+                        }}
+                      >
+                        <Trash2 className="text-destructive" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete</TooltipContent>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SchedulerView() {
   const runInBackground = useSettingsStore((s) => s.settings.runInBackground);
   const updateSettings = useSettingsStore((s) => s.update);
@@ -156,10 +261,16 @@ export function SchedulerView() {
   const remove = useScheduledJobsStore((s) => s.remove);
   const setEnabled = useScheduledJobsStore((s) => s.setEnabled);
 
-  const [dialog, setDialog] = useState<{ open: boolean; job: ScheduledJob | null }>({
-    open: false,
-    job: null,
-  });
+  const hydratePresets = usePresetsStore((s) => s.hydrate);
+  useEffect(() => {
+    void hydratePresets();
+  }, [hydratePresets]);
+
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    job: ScheduledJob | null;
+    template: ScheduledJob | null;
+  }>({ open: false, job: null, template: null });
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -167,11 +278,13 @@ export function SchedulerView() {
         title="Scheduler"
         description="Recurring copy/sync/move jobs that run while the app is open."
         actions={
-          <Button onClick={() => setDialog({ open: true, job: null })}>
+          <Button onClick={() => setDialog({ open: true, job: null, template: null })}>
             <Plus /> New job
           </Button>
         }
       />
+
+      <PresetsCard onSchedule={(template) => setDialog({ open: true, job: null, template })} />
 
       {!runInBackground && jobs.length > 0 && (
         <Alert>
@@ -261,7 +374,7 @@ export function SchedulerView() {
                         variant="ghost"
                         size="icon-sm"
                         aria-label={`Edit ${job.name}`}
-                        onClick={() => setDialog({ open: true, job })}
+                        onClick={() => setDialog({ open: true, job, template: null })}
                       >
                         <Pencil />
                       </Button>
@@ -293,9 +406,10 @@ export function SchedulerView() {
 
       {dialog.open && (
         <JobDialog
-          key={dialog.job?.id ?? "new"}
+          key={dialog.job?.id ?? dialog.template?.id ?? "new"}
           job={dialog.job}
-          onClose={() => setDialog({ open: false, job: null })}
+          template={dialog.template}
+          onClose={() => setDialog({ open: false, job: null, template: null })}
         />
       )}
     </div>
