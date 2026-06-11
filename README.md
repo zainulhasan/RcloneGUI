@@ -1,7 +1,9 @@
 # RcloneGUI
 
 A polished, cross-platform desktop GUI for [rclone](https://rclone.org) — built with Tauri 2,
-React and TypeScript. Browse remotes side by side, run copy/sync/move/bisync with dry-run and
+React and TypeScript. **Free and open source** — a no-cost alternative to paid cloud-storage
+apps like Mountain Duck, ExpanDrive and CloudMounter, aiming for the best feature set of any
+rclone front-end. Browse remotes side by side, run copy/sync/move/bisync with dry-run and
 filters, watch live transfer stats, mount remotes, schedule jobs, and use the **Watch &
 Auto-Clean** media workflow: sync a movie locally, watch it in your own player, and let the app
 clean up after you.
