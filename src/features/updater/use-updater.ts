@@ -31,6 +31,13 @@ function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+/** Tauri plugin errors arrive as plain strings, not Error objects. */
+function errorText(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
 /**
  * Check GitHub Releases for a newer version. `silent` suppresses the
  * "you're up to date" / error toasts (used for the launch check).
@@ -60,9 +67,15 @@ export async function checkForUpdates(opts: { silent: boolean }): Promise<void> 
       toast.success("RcloneGUI is up to date.");
     }
   } catch (err) {
-    logActivity("warning", "app", `Update check failed: ${(err as Error).message}`);
+    const detail = errorText(err);
+    // A 404 on latest.json means no published release yet — not an error
+    // worth alarming the user about.
+    const friendly = /404|[Nn]ot [Ff]ound/.test(detail)
+      ? "No published release found yet."
+      : detail;
+    logActivity("warning", "app", `Update check failed: ${friendly}`);
     if (!opts.silent) {
-      toast.error(`Update check failed: ${(err as Error).message}`);
+      toast.error("Update check failed", { description: friendly });
     }
   }
 }
