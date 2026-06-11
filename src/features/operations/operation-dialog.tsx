@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { BookmarkPlus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { usePresetsStore } from "@/store/presets";
 
 import { EMPTY_FLAGS, flagsToOptions, type FlagsValue } from "./flags";
 import { FlagsEditor } from "./flags-editor";
@@ -48,10 +51,30 @@ export function OperationDialog({
 }) {
   const [flags, setFlags] = useState<FlagsValue>({ ...EMPTY_FLAGS, ...defaults });
   const [resync, setResync] = useState(false);
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const upsertPreset = usePresetsStore((s) => s.upsert);
   const run = useRunOperation();
 
   if (state === null) return null;
   const copyText = KIND_COPY[state.kind];
+
+  const savePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    void upsertPreset({
+      id: crypto.randomUUID(),
+      name,
+      kind: state.kind,
+      srcFs: state.source.srcFs,
+      dstFs: state.dstFs,
+      flags,
+    }).then(() => {
+      toast.success(`Preset "${name}" saved — find it in Scheduler`);
+      setSavingPreset(false);
+      setPresetName("");
+    });
+  };
 
   const submit = () => {
     const options = flagsToOptions(flags);
@@ -115,7 +138,31 @@ export function OperationDialog({
 
         <FlagsEditor value={flags} onChange={setFlags} />
 
+        {savingPreset && (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              placeholder="Preset name"
+              aria-label="Preset name"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && savePreset()}
+            />
+            <Button size="sm" onClick={savePreset} disabled={!presetName.trim()}>
+              Save
+            </Button>
+          </div>
+        )}
+
         <DialogFooter>
+          <Button
+            variant="ghost"
+            className="mr-auto"
+            onClick={() => setSavingPreset((v) => !v)}
+            disabled={run.isPending}
+          >
+            <BookmarkPlus /> Save as preset…
+          </Button>
           <Button variant="ghost" onClick={onClose} disabled={run.isPending}>
             Cancel
           </Button>
