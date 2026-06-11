@@ -7,6 +7,8 @@ import { rc } from "@/lib/rc-client";
 import { logActivity } from "@/store/activity";
 import { useJobsStore } from "@/store/jobs";
 
+import { getJobHistoryDb } from "./history-db";
+
 const POLL_MS = 1000;
 export const SPARKLINE_SAMPLES = 60;
 
@@ -57,9 +59,26 @@ export function useJobCompletionWatcher() {
     const timer = setInterval(() => {
       for (const job of unfinished) {
         rc.jobStatus(job.jobid)
-          .then((status) => {
+          .then(async (status) => {
             if (!status.finished) return;
             markFinished(job.jobid, status.success, status.error || undefined);
+            const finalStats = await rc.stats(job.group).catch(() => null);
+            void getJobHistoryDb()
+              .then((db) =>
+                db.record({
+                  kind: job.kind,
+                  label: job.label,
+                  startedAt: job.startedAt,
+                  finishedAt: Date.now(),
+                  success: status.success,
+                  error: status.error || null,
+                  bytes: finalStats?.bytes ?? 0,
+                }),
+              )
+              .then(() => queryClient.invalidateQueries({ queryKey: ["job-history"] }))
+              .catch(() => {
+                logActivity("warning", "operation", "Could not record job in history");
+              });
             if (status.success) {
               toast.success(`${job.kind} finished`, { description: job.label });
               logActivity("info", "operation", `Job ${job.jobid} (${job.label}) finished`);

@@ -24,12 +24,20 @@ pub fn run() {
             tauri_plugin_sql::Builder::default()
                 .add_migrations(
                     "sqlite:media.db",
-                    vec![tauri_plugin_sql::Migration {
-                        version: 1,
-                        description: "create media_items",
-                        sql: include_str!("../migrations/001_media_items.sql"),
-                        kind: tauri_plugin_sql::MigrationKind::Up,
-                    }],
+                    vec![
+                        tauri_plugin_sql::Migration {
+                            version: 1,
+                            description: "create media_items",
+                            sql: include_str!("../migrations/001_media_items.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                        tauri_plugin_sql::Migration {
+                            version: 2,
+                            description: "create job_history",
+                            sql: include_str!("../migrations/002_job_history.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                    ],
                 )
                 .build(),
         )
