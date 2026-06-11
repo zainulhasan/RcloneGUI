@@ -3,6 +3,9 @@ import { CalendarClock, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { setAutostart } from "@/features/background/use-background";
+import { useSettingsStore } from "@/store/settings";
 import { EmptyState, PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,6 +150,8 @@ function JobDialog({ job, onClose }: { job: ScheduledJob | null; onClose: () => 
 }
 
 export function SchedulerView() {
+  const runInBackground = useSettingsStore((s) => s.settings.runInBackground);
+  const updateSettings = useSettingsStore((s) => s.update);
   const jobs = useScheduledJobsStore((s) => s.jobs);
   const remove = useScheduledJobsStore((s) => s.remove);
   const setEnabled = useScheduledJobsStore((s) => s.setEnabled);
@@ -167,6 +172,29 @@ export function SchedulerView() {
           </Button>
         }
       />
+
+      {!runInBackground && jobs.length > 0 && (
+        <Alert>
+          <CalendarClock className="size-4" />
+          <AlertTitle>Jobs only run while RcloneGUI is running</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>
+              Enable background mode so schedules keep working after you close the window.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void updateSettings({ runInBackground: true });
+                void setAutostart(true);
+                toast.success("Background mode enabled — RcloneGUI stays in the tray.");
+              }}
+            >
+              Enable
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {jobs.length === 0 ? (
         <EmptyState

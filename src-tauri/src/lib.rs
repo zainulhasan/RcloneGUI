@@ -1,9 +1,12 @@
+pub mod background;
 pub mod commands;
 pub mod disk;
 pub mod rclone;
 
+use background::AppFlags;
 use commands::DaemonState;
 use tauri::Manager;
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +16,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(
@@ -27,6 +34,12 @@ pub fn run() {
                 .build(),
         )
         .manage(DaemonState::default())
+        .manage(AppFlags::default())
+        .setup(|app| {
+            background::setup_tray(app.handle())?;
+            Ok(())
+        })
+        .on_window_event(background::handle_window_event)
         .invoke_handler(tauri::generate_handler![
             commands::detect_rclone,
             commands::daemon_start,
@@ -35,6 +48,8 @@ pub fn run() {
             commands::daemon_logs,
             commands::rc_call,
             commands::disk_free,
+            background::set_hide_on_close,
+            background::tray_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
