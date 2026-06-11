@@ -335,7 +335,12 @@ export function MountsView() {
                       <TableCell className="font-medium">
                         <span className="flex items-center gap-2">
                           {m.fs}
-                          {isActive && <Badge variant="secondary">mounted</Badge>}
+                          {isActive && (
+                            <Badge variant="running">
+                              <span className="size-1.5 rounded-full bg-current" />
+                              mounted
+                            </Badge>
+                          )}
                         </span>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{m.mountPoint}</TableCell>

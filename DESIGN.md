@@ -42,8 +42,8 @@ Rules:
 
 ## Radius Scale
 
-`--radius` is `0.5rem`. Tailwind maps: `rounded-sm` (radius − 4px), `rounded-md` (radius − 2px),
-`rounded-lg` (radius), `rounded-xl` (radius + 4px). Buttons/inputs use `md`, cards/dialogs `lg`.
+`--radius` is `0.5rem` (8px). Tailwind maps: `rounded-sm` (5px), `rounded-md` (7px),
+`rounded-lg` (8px), `rounded-xl` (14px). Buttons/inputs use `sm`, cards `lg`, dialogs `xl`.
 
 ## Spacing & Density
 
@@ -55,7 +55,7 @@ Tailwind's default 4px spacing scale. The app is _slightly dense_:
 
 ## Typography
 
-System font stack (Tailwind default `font-sans`).
+**Geist Variable** (UI) and **Geist Mono Variable** (paths, sizes, URLs) via Fontsource.
 
 | Role               | Classes                                     |
 | ------------------ | ------------------------------------------- |

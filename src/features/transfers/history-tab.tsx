@@ -82,11 +82,17 @@ export function HistoryTab() {
               </TableCell>
               <TableCell>
                 {e.success ? (
-                  <Badge variant="secondary">done</Badge>
+                  <Badge variant="done">
+                    <span className="size-1.5 rounded-full bg-current" />
+                    done
+                  </Badge>
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge variant="destructive">failed</Badge>
+                      <Badge variant="failed">
+                        <span className="size-1.5 rounded-full bg-current" />
+                        failed
+                      </Badge>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-80">{e.error}</TooltipContent>
                   </Tooltip>

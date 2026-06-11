@@ -40,9 +40,21 @@ function StatCard({
 }) {
   return (
     <Card
-      className={cn("gap-3", onClick && "hover:border-primary/40 cursor-pointer transition-colors")}
+      className={cn(
+        "relative gap-3 overflow-hidden",
+        onClick && "hover:border-primary/40 cursor-pointer transition-colors",
+      )}
       onClick={onClick}
     >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-x-0 top-0 h-[2px]",
+          tone === "success" && "bg-success",
+          tone === "warning" && "bg-warning",
+          tone === "default" && "bg-primary",
+        )}
+      />
       <CardContent className="flex items-start gap-3">
         <div
           className={cn(

@@ -21,7 +21,7 @@ export function WatchedBadge({
   const watched = useWatchedPaths(!isLocal || pane.fs === LOCAL_FS ? null : pane.fs);
   if (!isLocal || !watched.data?.has(item.Path)) return null;
   return (
-    <Badge variant="secondary" className="shrink-0">
+    <Badge variant="watched" className="shrink-0">
       <Eye /> watched
     </Badge>
   );
