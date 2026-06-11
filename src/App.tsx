@@ -11,6 +11,7 @@ import { WatchedBadge, WatchMenuItems } from "@/features/media/browser-integrati
 import { useCleanupRunner } from "@/features/media/use-cleanup-runner";
 import { useHomeInit } from "@/features/browser/use-home-init";
 import { useAutoMounts } from "@/features/mounts/use-auto-mounts";
+import { useBackgroundMode, useTrayStatus } from "@/features/background/use-background";
 import { MountsView } from "@/features/mounts/mounts-view";
 import { RemotesView } from "@/features/remotes/remotes-view";
 import { SchedulerView } from "@/features/scheduler/scheduler-view";
@@ -91,6 +92,8 @@ function BackgroundServices() {
   useLaunchUpdateCheck();
   useHomeInit();
   useAutoMounts();
+  useBackgroundMode();
+  useTrayStatus();
   return null;
 }
 

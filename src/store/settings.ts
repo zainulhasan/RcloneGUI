@@ -26,6 +26,8 @@ export interface AppSettings {
   cleanup: CleanupRules;
   /** TMDB API key for the media library view (user-supplied). */
   tmdbApiKey: string | null;
+  /** Keep running in the tray when the window is closed. */
+  runInBackground: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -38,6 +40,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   deleteOnMarkWatched: false,
   cleanup: { afterHours: null, sizeCapGb: null, watchedOnly: true },
   tmdbApiKey: null,
+  runInBackground: true,
 };
 
 interface SettingsState {
