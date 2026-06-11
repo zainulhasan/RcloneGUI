@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FolderOpen, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useRcloneInfo } from "@/features/health/use-daemon";
+import { isAutostartEnabled, setAutostart } from "@/features/background/use-background";
 import { checkForUpdates } from "@/features/updater/use-updater";
 import { useSettingsStore } from "@/store/settings";
 import { useThemeStore, type Theme } from "@/store/theme";
@@ -67,6 +68,10 @@ function Row({
 
 export function SettingsView() {
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [autostart, setAutostartState] = useState(false);
+  useEffect(() => {
+    void isAutostartEnabled().then(setAutostartState);
+  }, []);
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const theme = useThemeStore((s) => s.theme);
@@ -76,6 +81,32 @@ export function SettingsView() {
   return (
     <div className="flex max-w-3xl flex-col gap-4 p-6">
       <PageHeader title="Settings" description="Preferences are saved automatically." />
+
+      <Section
+        title="Background"
+        description="With both enabled, mounts and scheduled jobs are available right after login — no window needed."
+      >
+        <Row
+          label="Keep running in the tray"
+          hint="Closing the window hides RcloneGUI instead of quitting. Quit from the tray menu."
+        >
+          <Switch
+            checked={settings.runInBackground}
+            onCheckedChange={(v) => void update({ runInBackground: v })}
+            aria-label="Keep running in the tray"
+          />
+        </Row>
+        <Row label="Launch at login" hint="Start RcloneGUI automatically when you log in.">
+          <Switch
+            checked={autostart}
+            onCheckedChange={(v) => {
+              setAutostartState(v);
+              void setAutostart(v);
+            }}
+            aria-label="Launch at login"
+          />
+        </Row>
+      </Section>
 
       <Section title="Appearance">
         <Row label="Theme">
