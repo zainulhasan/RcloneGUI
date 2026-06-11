@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, RefreshCw } from "lucide-react";
+import { FolderOpen, Plug, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page";
@@ -17,7 +17,18 @@ import { Switch } from "@/components/ui/switch";
 import { useRcloneInfo } from "@/features/health/use-daemon";
 import { isAutostartEnabled, setAutostart } from "@/features/background/use-background";
 import { checkForUpdates } from "@/features/updater/use-updater";
-import { useSettingsStore } from "@/store/settings";
+import { toast } from "sonner";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { useSettingsStore, type Host } from "@/store/settings";
 import { useThemeStore, type Theme } from "@/store/theme";
 
 async function pickDirectory(): Promise<string | null> {
@@ -63,6 +74,129 @@ function Row({
       </div>
       {children}
     </div>
+  );
+}
+
+function HostsSection() {
+  const settings = useSettingsStore((s) => s.settings);
+  const update = useSettingsStore((s) => s.update);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Host>({ id: "", name: "", url: "", user: "", pass: "" });
+  const [testing, setTesting] = useState<string | null>(null);
+
+  const testHost = async (host: Host) => {
+    setTesting(host.id);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("rc_call", {
+        method: "core/version",
+        params: {},
+        host: { url: host.url, user: host.user || null, pass: host.pass || null },
+      });
+      toast.success(`"${host.name}" is reachable`);
+    } catch (err) {
+      toast.error(`"${host.name}" unreachable`, { description: String(err) });
+    } finally {
+      setTesting(null);
+    }
+  };
+
+  const save = () => {
+    const host: Host = { ...draft, id: crypto.randomUUID(), name: draft.name.trim() };
+    void update({ hosts: [...settings.hosts, host] });
+    setAdding(false);
+    setDraft({ id: "", name: "", url: "", user: "", pass: "" });
+    toast.success(`Host "${host.name}" added — switch to it from the top bar`);
+  };
+
+  return (
+    <Section
+      title="Hosts"
+      description="Manage rclone running on another machine (NAS, server). A picker appears in the top bar once a host is added."
+    >
+      {settings.hosts.map((host) => (
+        <div key={host.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium">{host.name}</span>
+            <span className="text-muted-foreground truncate font-mono text-xs">{host.url}</span>
+          </div>
+          {host.user && <Badge variant="outline">auth</Badge>}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Test ${host.name}`}
+            disabled={testing === host.id}
+            onClick={() => void testHost(host)}
+          >
+            <Plug />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${host.name}`}
+            onClick={() => {
+              void update({ hosts: settings.hosts.filter((h) => h.id !== host.id) });
+            }}
+          >
+            <Trash2 className="text-destructive" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" className="w-fit" onClick={() => setAdding(true)}>
+        <Plus /> Add host
+      </Button>
+
+      <Dialog open={adding} onOpenChange={setAdding}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add a remote rclone host</DialogTitle>
+            <DialogDescription>
+              The other machine must run{" "}
+              <span className="font-mono">rclone rcd --rc-addr :5572</span> (add --rc-user/--rc-pass
+              for auth).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Row label="Name">
+              <Input
+                value={draft.name}
+                placeholder="NAS"
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+            </Row>
+            <Row label="URL">
+              <Input
+                className="font-mono text-xs"
+                value={draft.url}
+                placeholder="http://nas.local:5572"
+                onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+              />
+            </Row>
+            <Row label="User (optional)">
+              <Input
+                value={draft.user}
+                onChange={(e) => setDraft({ ...draft, user: e.target.value })}
+              />
+            </Row>
+            <Row label="Password (optional)">
+              <Input
+                type="password"
+                value={draft.pass}
+                onChange={(e) => setDraft({ ...draft, pass: e.target.value })}
+              />
+            </Row>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAdding(false)}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={!draft.name.trim() || !/^https?:\/\//.test(draft.url)}>
+              Add host
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Section>
   );
 }
 
@@ -294,6 +428,8 @@ export function SettingsView() {
           />
         </Row>
       </Section>
+
+      <HostsSection />
 
       <Section title="Updates" description="RcloneGUI also checks automatically on launch.">
         <Row label="Check for updates">

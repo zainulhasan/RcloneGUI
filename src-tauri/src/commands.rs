@@ -2,6 +2,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use serde::Deserialize;
 use serde_json::Value;
 use tauri::State;
 
@@ -104,13 +105,33 @@ pub fn daemon_status(state: State<'_, DaemonState>) -> DaemonStatus {
     state.status()
 }
 
-/// Proxy a single RC API call to the running daemon.
+/// Credentials for a remote rclone daemon (Settings → Hosts).
+#[derive(Debug, Deserialize)]
+pub struct HostParam {
+    pub url: String,
+    pub user: Option<String>,
+    pub pass: Option<String>,
+}
+
+/// Proxy a single RC API call — to the local daemon, or to a remote
+/// daemon when `host` is provided.
 #[tauri::command]
 pub async fn rc_call(
     state: State<'_, DaemonState>,
     method: String,
     params: Value,
+    host: Option<HostParam>,
 ) -> Result<Value, String> {
+    if let Some(host) = host {
+        return proxy::rc_call_url(
+            &host.url,
+            host.user.as_deref(),
+            host.pass.as_deref(),
+            &method,
+            params,
+        )
+        .await;
+    }
     let status = state.status();
     let port = status
         .port

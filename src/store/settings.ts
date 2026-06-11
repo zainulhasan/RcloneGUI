@@ -1,5 +1,14 @@
 import { create } from "zustand";
 
+/** A remote rclone daemon this app can manage (Settings → Hosts). */
+export interface Host {
+  id: string;
+  name: string;
+  url: string;
+  user: string;
+  pass: string;
+}
+
 /** Auto-cleanup rules for the Watch Folder. All optional/off by default. */
 export interface CleanupRules {
   /** Delete local copies N hours after sync (null = off). */
@@ -28,6 +37,8 @@ export interface AppSettings {
   tmdbApiKey: string | null;
   /** Keep running in the tray when the window is closed. */
   runInBackground: boolean;
+  /** Remote rclone daemons the host picker can switch to. */
+  hosts: Host[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -41,6 +52,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cleanup: { afterHours: null, sizeCapGb: null, watchedOnly: true },
   tmdbApiKey: null,
   runInBackground: true,
+  hosts: [],
 };
 
 interface SettingsState {

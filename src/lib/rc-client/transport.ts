@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { activeHost } from "@/store/host";
+
 /**
  * A transport delivers one RC call (`method`, JSON `params`) to the daemon
  * and resolves with the parsed JSON response.
@@ -22,8 +24,13 @@ export class RcError extends Error {
  * which proxies it to the local rclone daemon over HTTP.
  */
 export const tauriTransport: RcTransport = async (method, params) => {
+  const host = activeHost();
   try {
-    return await invoke("rc_call", { method, params });
+    return await invoke("rc_call", {
+      method,
+      params,
+      host: host ? { url: host.url, user: host.user || null, pass: host.pass || null } : null,
+    });
   } catch (err) {
     throw new RcError(method, typeof err === "string" ? err : String(err));
   }
