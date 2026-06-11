@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { absoluteToLocalPath, parentPath, useBrowserStore, type PaneIndex } from "@/store/browser";
 
 import { filterListing } from "./filter";
+import { renamedPath, renameItem, validateRename } from "./rename";
 import { applyClick, EMPTY_SELECTION, pruneSelection, type SelectionState } from "./selection";
 import { LOCAL_FS, useListing } from "./use-listing";
 
@@ -155,6 +156,35 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
     if (item.IsDir) {
       setPath(index, item.Path);
       setSelection(EMPTY_SELECTION);
+    }
+  };
+
+  const [renaming, setRenaming] = useState<RcListItem | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const renameError = renaming
+    ? validateRename(
+        renameValue,
+        items.filter((i) => i.Path !== renaming.Path).map((i) => i.Name),
+      )
+    : null;
+
+  const submitRename = async () => {
+    if (!renaming || !paneFs || renameError) return;
+    try {
+      await renameItem(paneFs, renaming, renameValue);
+      const { getWatchedDb } = await import("@/features/media/watched-db");
+      const db = await getWatchedDb();
+      await db.updateRemotePath(
+        paneFs,
+        renaming.Path,
+        renamedPath(renaming.Path, renameValue.trim()),
+      );
+      toast.success(`Renamed to "${renameValue.trim()}"`);
+      setRenaming(null);
+      void refresh();
+    } catch (err) {
+      toast.error(`Rename failed: ${(err as Error).message}`);
     }
   };
 
@@ -379,7 +409,19 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                             }),
                           )
                         }
-                        onDoubleClick={() => enterDir(item)}
+                        onDoubleClick={() => {
+                          if (item.IsDir) {
+                            enterDir(item);
+                          } else if (paneFs === LOCAL_FS) {
+                            void import("@/features/media/watch-actions").then((m) =>
+                              m
+                                .openLocal(`/${item.Path}`)
+                                .catch((err: Error) =>
+                                  toast.error(`Could not open: ${err.message}`),
+                                ),
+                            );
+                          }
+                        }}
                         onContextMenu={() => {
                           if (!isSelected) {
                             setSelection({ selected: new Set([item.Path]), anchor: i });
@@ -422,6 +464,16 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                   {selectedItems.length === 1 && selectedItems[0].IsDir && (
                     <ContextMenuItem onClick={() => enterDir(selectedItems[0])}>
                       Open
+                    </ContextMenuItem>
+                  )}
+                  {selectedItems.length === 1 && (
+                    <ContextMenuItem
+                      onClick={() => {
+                        setRenaming(selectedItems[0]);
+                        setRenameValue(selectedItems[0].Name);
+                      }}
+                    >
+                      Rename…
                     </ContextMenuItem>
                   )}
                   <ContextMenuItem
@@ -481,6 +533,36 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
             </Button>
             <Button onClick={() => void createFolder()} disabled={!mkdirName.trim()}>
               Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renaming !== null} onOpenChange={(o) => !o && setRenaming(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename "{renaming?.Name}"</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            aria-label="New name"
+            aria-invalid={!!renameError}
+            onKeyDown={(e) => e.key === "Enter" && void submitRename()}
+          />
+          {renameError && renameValue !== renaming?.Name && (
+            <p className="text-destructive text-xs">{renameError}</p>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRenaming(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void submitRename()}
+              disabled={!!renameError || renameValue.trim() === renaming?.Name}
+            >
+              Rename
             </Button>
           </DialogFooter>
         </DialogContent>

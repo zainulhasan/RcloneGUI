@@ -77,6 +77,14 @@ export class WatchedDb {
     );
   }
 
+  /** Keep watched status attached when an item is renamed on the remote. */
+  async updateRemotePath(remoteFs: string, oldPath: string, newPath: string): Promise<void> {
+    await this.db.execute(
+      `UPDATE media_items SET remote_path = $3 WHERE remote_fs = $1 AND remote_path = $2`,
+      [remoteFs, oldPath, newPath],
+    );
+  }
+
   /** Most recently synced/watched items for the media panel. */
   async recent(limit = 50): Promise<MediaItem[]> {
     const rows = await this.db.select<MediaRow[]>(
