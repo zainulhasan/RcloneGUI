@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUp,
   ChevronRight,
+  Filter as FilterIcon,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -10,6 +11,7 @@ import {
   Home,
   Loader2,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +46,7 @@ import { formatBytes, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { absoluteToLocalPath, parentPath, useBrowserStore, type PaneIndex } from "@/store/browser";
 
+import { filterListing } from "./filter";
 import { applyClick, EMPTY_SELECTION, pruneSelection, type SelectionState } from "./selection";
 import { LOCAL_FS, useListing } from "./use-listing";
 
@@ -125,16 +128,25 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
   const queryClient = useQueryClient();
   const listing = useListing(pane.fs, pane.path);
   const items = useMemo(() => sortListing(listing.data ?? []), [listing.data]);
-  const keys = useMemo(() => items.map((i) => i.Path), [items]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
+  const visibleItems = useMemo(
+    () => (filterOpen ? filterListing(items, filterQuery) : items),
+    [items, filterOpen, filterQuery],
+  );
+  const visibleKeys = useMemo(() => visibleItems.map((i) => i.Path), [visibleItems]);
 
   const [rawSelection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [mkdirOpen, setMkdirOpen] = useState(false);
   const [mkdirName, setMkdirName] = useState("");
 
   // Derive instead of syncing state: stale keys vanish on refresh/navigation.
-  const selection = useMemo(() => pruneSelection(rawSelection, keys), [rawSelection, keys]);
+  const selection = useMemo(
+    () => pruneSelection(rawSelection, visibleKeys),
+    [rawSelection, visibleKeys],
+  );
 
-  const selectedItems = items.filter((i) => selection.selected.has(i.Path));
+  const selectedItems = visibleItems.filter((i) => selection.selected.has(i.Path));
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["listing", pane.fs, pane.path] });
@@ -249,6 +261,23 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
               <Button
                 variant="ghost"
                 size="icon-sm"
+                aria-label="Filter items"
+                disabled={!pane.fs}
+                onClick={() => {
+                  setFilterOpen((open) => !open);
+                  setFilterQuery("");
+                }}
+              >
+                <FilterIcon className={cn(filterOpen && "text-primary")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Filter</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 aria-label="New folder"
                 disabled={!pane.fs}
                 onClick={() => setMkdirOpen(true)}
@@ -274,6 +303,36 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
           </Tooltip>
         </div>
       </header>
+
+      {filterOpen && (
+        <div className="flex items-center gap-1 border-b px-2 py-1">
+          <Input
+            autoFocus
+            className="h-7 text-xs"
+            placeholder="Filter this folder…"
+            aria-label="Filter query"
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setFilterOpen(false);
+                setFilterQuery("");
+              }
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Clear filter"
+            onClick={() => {
+              setFilterOpen(false);
+              setFilterQuery("");
+            }}
+          >
+            <X />
+          </Button>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {pane.fs === null ? (
@@ -304,7 +363,7 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                   <span className="w-16 shrink-0 text-right">Size</span>
                 </div>
                 <ul className="p-1" role="listbox" aria-multiselectable>
-                  {items.map((item, i) => {
+                  {visibleItems.map((item, i) => {
                     const isSelected = selection.selected.has(item.Path);
                     const visual = item.IsDir ? null : fileVisual(item.Name);
                     return (
@@ -314,7 +373,7 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                         aria-selected={isSelected}
                         onClick={(e) =>
                           setSelection((s) =>
-                            applyClick(s, keys, i, {
+                            applyClick(s, visibleKeys, i, {
                               meta: e.metaKey || e.ctrlKey,
                               shift: e.shiftKey,
                             }),
@@ -386,8 +445,14 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
       <footer className="text-muted-foreground flex items-center justify-between border-t px-3 py-1 text-xs tabular-nums">
         <span>
-          {items.filter((i) => i.IsDir).length} folders · {items.filter((i) => !i.IsDir).length}{" "}
-          files
+          {filterOpen && filterQuery.trim() ? (
+            `${visibleItems.length} of ${items.length} shown`
+          ) : (
+            <>
+              {items.filter((i) => i.IsDir).length} folders · {items.filter((i) => !i.IsDir).length}{" "}
+              files
+            </>
+          )}
         </span>
         <span>
           {selection.selected.size > 0
