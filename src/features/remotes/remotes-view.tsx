@@ -28,6 +28,7 @@ import { useNavigationStore } from "@/store/navigation";
 import { useBrowserStore } from "@/store/browser";
 
 import { RemoteWizard } from "./remote-wizard";
+import { UsageCell } from "./usage-cell";
 import { useDeleteRemote, useRemotes, useTestRemote } from "./use-remotes";
 
 function IconAction({
@@ -115,6 +116,7 @@ export function RemotesView() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Usage</TableHead>
               <TableHead className="w-40 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,6 +126,9 @@ export function RemotesView() {
                 <TableCell className="font-medium">{name}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{config.type ?? "unknown"}</Badge>
+                </TableCell>
+                <TableCell>
+                  <UsageCell name={name} />
                 </TableCell>
                 <TableCell className="text-right">
                   <IconAction
