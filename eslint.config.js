@@ -41,10 +41,13 @@ export default defineConfig([
     },
   },
   {
-    // shadcn primitives intentionally export variant helpers next to components.
-    files: ["src/components/ui/**/*.tsx"],
+    // shadcn primitives are vendored as-is: they export variant helpers next
+    // to components and use patterns the strict hooks rules flag.
+    files: ["src/components/ui/**/*.tsx", "src/hooks/use-mobile.ts"],
     rules: {
       "react-refresh/only-export-components": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/set-state-in-effect": "off",
     },
   },
 ]);

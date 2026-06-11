@@ -153,21 +153,28 @@ export function TransfersView() {
         }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Bandwidth</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="text-2xl font-semibold tabular-nums">
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="flex items-stretch">
+          <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
+            <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+              Current speed
+            </span>
+            <span className="text-3xl font-semibold tracking-tight tabular-nums">
               {formatSpeed(stats.data?.speed ?? 0)}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-xs tabular-nums">
               {formatBytes(stats.data?.bytes ?? 0)} transferred · {stats.data?.transfers ?? 0} files
+              {(stats.data?.errors ?? 0) > 0 && (
+                <span className="text-destructive"> · {stats.data?.errors} errors</span>
+              )}
             </span>
           </div>
-          <Sparkline samples={samples} capacity={SPARKLINE_SAMPLES} />
-        </CardContent>
+          <div className="min-w-0 flex-1 self-end" aria-hidden>
+            <div className="h-20">
+              <Sparkline samples={samples} capacity={SPARKLINE_SAMPLES} />
+            </div>
+          </div>
+        </div>
       </Card>
 
       {activeJobs.length === 0 ? (

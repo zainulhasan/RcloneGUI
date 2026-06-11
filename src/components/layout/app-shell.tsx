@@ -13,9 +13,24 @@ import {
   Sun,
 } from "lucide-react";
 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { useNavigationStore, type View } from "@/store/navigation";
 import { resolveTheme, useThemeStore } from "@/store/theme";
 
@@ -25,12 +40,7 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-interface NavSection {
-  label: string | null;
-  items: NavItem[];
-}
-
-const NAV_SECTIONS: NavSection[] = [
+const NAV_SECTIONS: { label: string | null; items: NavItem[] }[] = [
   {
     label: null,
     items: [{ view: "dashboard", label: "Dashboard", icon: Home }],
@@ -57,30 +67,17 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-function NavButton({ item }: { item: NavItem }) {
-  const view = useNavigationStore((s) => s.view);
-  const navigate = useNavigationStore((s) => s.navigate);
-  const isActive = view === item.view;
-
-  return (
-    <button
-      onClick={() => navigate(item.view)}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-        isActive
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-sidebar-foreground hover:bg-sidebar-accent/60",
-      )}
-    >
-      {isActive && (
-        <span className="bg-primary absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full" />
-      )}
-      <item.icon className={cn("size-4", isActive ? "text-primary" : "text-muted-foreground")} />
-      {item.label}
-    </button>
-  );
-}
+const VIEW_TITLES: Record<View, string> = {
+  dashboard: "Dashboard",
+  remotes: "Remotes",
+  browser: "Browser",
+  transfers: "Transfers",
+  mounts: "Mounts",
+  scheduler: "Scheduler",
+  media: "Media",
+  logs: "Logs",
+  settings: "Settings",
+};
 
 function ThemeToggle() {
   const theme = useThemeStore((s) => s.theme);
@@ -99,7 +96,7 @@ function ThemeToggle() {
           {resolved === "dark" ? <Sun /> : <Moon />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="right">Toggle theme</TooltipContent>
+      <TooltipContent>Toggle theme</TooltipContent>
     </Tooltip>
   );
 }
@@ -109,53 +106,75 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigationStore((s) => s.navigate);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="bg-sidebar border-sidebar-border flex w-56 shrink-0 flex-col border-r">
-        <div className="flex h-14 items-center gap-2.5 px-4">
-          <div className="bg-primary flex size-7 items-center justify-center rounded-lg shadow-sm">
-            <ArrowLeftRight className="text-primary-foreground size-4" />
-          </div>
-          <span className="text-sidebar-foreground text-sm font-semibold tracking-tight">
-            RcloneGUI
-          </span>
-        </div>
-        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-1" aria-label="Main">
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" onClick={() => navigate("dashboard")}>
+                <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <ArrowLeftRight className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">RcloneGUI</span>
+                  <span className="text-muted-foreground truncate text-xs">Cloud sync</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+
+        <SidebarContent>
           {NAV_SECTIONS.map((section, i) => (
-            <div key={i} className="flex flex-col gap-0.5">
-              {section.label && (
-                <p className="text-muted-foreground px-2.5 pt-3 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-                  {section.label}
-                </p>
-              )}
-              {section.items.map((item) => (
-                <NavButton key={item.view} item={item} />
-              ))}
-            </div>
+            <SidebarGroup key={i}>
+              {section.label && <SidebarGroupLabel>{section.label}</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {section.items.map((item) => (
+                    <SidebarMenuItem key={item.view}>
+                      <SidebarMenuButton
+                        isActive={view === item.view}
+                        tooltip={item.label}
+                        onClick={() => navigate(item.view)}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           ))}
-        </nav>
-        <div className="border-sidebar-border flex items-center justify-between border-t px-3 py-2">
-          <button
-            onClick={() => navigate("settings")}
-            aria-current={view === "settings" ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-              view === "settings"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/60",
-            )}
-          >
-            <Settings
-              className={cn(
-                "size-4",
-                view === "settings" ? "text-primary" : "text-muted-foreground",
-              )}
-            />
-            Settings
-          </button>
-          <ThemeToggle />
-        </div>
-      </aside>
-      <main className="flex-1 overflow-auto">{children}</main>
-    </div>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={view === "settings"}
+                tooltip="Settings"
+                onClick={() => navigate("settings")}
+              >
+                <Settings />
+                <span>Settings</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset className="h-screen overflow-hidden">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
+          <span className="text-sm font-medium">{VIEW_TITLES[view]}</span>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
+        </header>
+        <main className="min-h-0 flex-1 overflow-auto">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
