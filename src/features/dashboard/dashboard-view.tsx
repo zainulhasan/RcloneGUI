@@ -1,23 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  Activity,
   ArrowLeftRight,
   CheckCircle2,
   FolderTree,
   HardDrive,
   Server,
-  Settings,
+  XCircle,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page";
 import { useRcloneInfo } from "@/features/health/use-daemon";
 import { useRemotes } from "@/features/remotes/use-remotes";
 import { rc } from "@/lib/rc-client";
 import { daemonStatus, diskFree } from "@/lib/tauri";
 import { formatBytes } from "@/lib/format";
-import { useActivityStore } from "@/store/activity";
+import { cn } from "@/lib/utils";
+import { useActivityStore, type ActivityLevel } from "@/store/activity";
 import { useJobsStore } from "@/store/jobs";
 import { useNavigationStore } from "@/store/navigation";
 import { useSettingsStore } from "@/store/settings";
@@ -27,32 +28,49 @@ function StatCard({
   value,
   hint,
   icon: Icon,
+  tone = "default",
   onClick,
 }: {
   title: string;
   value: React.ReactNode;
   hint?: string;
   icon: typeof Server;
+  tone?: "default" | "success" | "warning";
   onClick?: () => void;
 }) {
   return (
     <Card
-      className={onClick ? "hover:border-primary/40 cursor-pointer transition-colors" : undefined}
+      className={cn("gap-3", onClick && "hover:border-primary/40 cursor-pointer transition-colors")}
       onClick={onClick}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-muted-foreground text-xs font-medium uppercase">
-          {title}
-        </CardTitle>
-        <Icon className="text-muted-foreground size-4" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-xl font-semibold">{value}</div>
-        {hint && <p className="text-muted-foreground mt-1 text-xs">{hint}</p>}
+      <CardContent className="flex items-start gap-3">
+        <div
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+            tone === "success" && "bg-success/12 text-success",
+            tone === "warning" && "bg-warning/15 text-warning-foreground",
+            tone === "default" && "bg-primary/10 text-primary",
+          )}
+        >
+          <Icon className="size-4.5" />
+        </div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-muted-foreground text-xs font-medium">{title}</span>
+          <span className="truncate text-lg leading-tight font-semibold tracking-tight">
+            {value}
+          </span>
+          {hint && <span className="text-muted-foreground truncate text-xs">{hint}</span>}
+        </div>
       </CardContent>
     </Card>
   );
 }
+
+const LEVEL_DOT: Record<ActivityLevel, string> = {
+  info: "bg-chart-1",
+  warning: "bg-warning",
+  error: "bg-destructive",
+};
 
 export function DashboardView() {
   const navigate = useNavigationStore((s) => s.navigate);
@@ -72,88 +90,107 @@ export function DashboardView() {
 
   const remoteCount = Object.keys(remotes.data ?? {}).length;
   const activeJobs = jobs.filter((j) => !j.finished).length;
-  const recentActivity = entries.slice(-6).reverse();
+  const recentActivity = entries.slice(-8).reverse();
+  const daemonUp = daemon.data?.running ?? false;
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <PageHeader title="Dashboard" description="Health, activity and quick actions at a glance." />
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
+      <PageHeader
+        title="Dashboard"
+        description="Health, activity and quick actions at a glance."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => navigate("remotes")}>
+              <Server /> Manage remotes
+            </Button>
+            <Button onClick={() => navigate("browser")}>
+              <FolderTree /> Open Browser
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
-          title="rclone"
+          title="rclone daemon"
+          tone={daemonUp ? "success" : "warning"}
+          icon={daemonUp ? CheckCircle2 : XCircle}
           value={
-            <span className="flex items-center gap-2">
+            <span className="flex items-baseline gap-1.5">
               {info.data?.version ?? "—"}
-              {daemon.data?.running && (
-                <Badge variant="secondary">
-                  <CheckCircle2 className="text-success" /> daemon up
-                </Badge>
-              )}
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  daemonUp ? "text-success" : "text-destructive",
+                )}
+              >
+                {daemonUp ? "running" : "stopped"}
+              </span>
             </span>
           }
-          hint={paths.data ? `config: ${paths.data.config}` : undefined}
-          icon={Settings}
+          hint={paths.data?.config}
           onClick={() => navigate("settings")}
         />
         <StatCard
           title="Remotes"
-          value={remoteCount}
-          hint="configured storage providers"
           icon={Server}
+          value={remoteCount}
+          hint={remoteCount === 0 ? "none yet" : "providers connected"}
           onClick={() => navigate("remotes")}
         />
         <StatCard
-          title="Transfers"
-          value={activeJobs}
-          hint="active jobs"
+          title="Active transfers"
           icon={ArrowLeftRight}
+          value={activeJobs}
+          hint={activeJobs === 0 ? "nothing running" : "jobs in flight"}
           onClick={() => navigate("transfers")}
         />
         <StatCard
           title="Watch folder"
-          value={free.data !== undefined ? `${formatBytes(free.data)} free` : "not set"}
-          hint={watchFolder ?? "set one in Settings to use Watch & Auto-Clean"}
           icon={HardDrive}
+          tone={watchFolder ? "default" : "warning"}
+          value={
+            free.data !== undefined ? (
+              `${formatBytes(free.data)} free`
+            ) : (
+              <span className="text-muted-foreground font-normal">not set</span>
+            )
+          }
+          hint={watchFolder ?? "set in Settings"}
           onClick={() => navigate(watchFolder ? "media" : "settings")}
         />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Recent activity</CardTitle>
-          <CardDescription>Operations, cleanups and scheduler runs.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Activity className="text-muted-foreground size-4" />
+            Recent activity
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {recentActivity.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Nothing yet. Browse a remote and start a transfer.
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              Nothing yet — operations, cleanups and scheduler runs will appear here.
             </p>
           ) : (
-            <ul className="flex flex-col gap-1.5">
+            <ul className="divide-border -mx-1 divide-y">
               {recentActivity.map((e) => (
-                <li key={e.id} className="flex items-center gap-2 text-xs">
-                  <Badge
-                    variant={e.level === "info" ? "secondary" : "destructive"}
-                    className="w-16 justify-center"
-                  >
-                    {e.category}
-                  </Badge>
-                  <span className="text-muted-foreground truncate">{e.message}</span>
+                <li key={e.id} className="flex items-center gap-3 px-1 py-2 text-sm">
+                  <span className={cn("size-1.5 shrink-0 rounded-full", LEVEL_DOT[e.level])} />
+                  <span className="min-w-0 flex-1 truncate">{e.message}</span>
+                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                    {new Date(e.at).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
         </CardContent>
       </Card>
-
-      <div className="flex gap-2">
-        <Button onClick={() => navigate("browser")}>
-          <FolderTree /> Open Browser
-        </Button>
-        <Button variant="outline" onClick={() => navigate("remotes")}>
-          <Server /> Manage remotes
-        </Button>
-      </div>
     </div>
   );
 }

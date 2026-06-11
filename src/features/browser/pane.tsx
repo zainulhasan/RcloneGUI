@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUp,
   ChevronRight,
-  File,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -40,7 +39,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { rc, type RcListItem } from "@/lib/rc-client";
-import { formatBytes } from "@/lib/format";
+import { fileVisual } from "./file-visual";
+import { formatBytes, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { absoluteToLocalPath, parentPath, useBrowserStore, type PaneIndex } from "@/store/browser";
 
@@ -277,7 +277,10 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {pane.fs === null ? (
-          <p className="text-muted-foreground p-4 text-sm">Choose a location to browse.</p>
+          <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-4">
+            <HardDrive className="size-6 opacity-50" />
+            <p className="text-sm">Choose a location above to browse.</p>
+          </div>
         ) : listing.isLoading ? (
           <div className="flex flex-col gap-1.5 p-2">
             <Skeleton className="h-7 w-full" />
@@ -287,51 +290,71 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
         ) : listing.isError ? (
           <p className="text-destructive p-4 text-sm">{(listing.error as Error).message}</p>
         ) : items.length === 0 ? (
-          <p className="text-muted-foreground p-4 text-sm">Empty folder.</p>
+          <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-4">
+            <Folder className="size-6 opacity-50" />
+            <p className="text-sm">This folder is empty.</p>
+          </div>
         ) : (
           <ContextMenu>
             <ContextMenuTrigger asChild>
-              <ul className="p-1" role="listbox" aria-multiselectable>
-                {items.map((item, i) => {
-                  const isSelected = selection.selected.has(item.Path);
-                  return (
-                    <li
-                      key={item.Path}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={(e) =>
-                        setSelection((s) =>
-                          applyClick(s, keys, i, {
-                            meta: e.metaKey || e.ctrlKey,
-                            shift: e.shiftKey,
-                          }),
-                        )
-                      }
-                      onDoubleClick={() => enterDir(item)}
-                      onContextMenu={() => {
-                        if (!isSelected) {
-                          setSelection({ selected: new Set([item.Path]), anchor: i });
+              <div>
+                <div className="text-muted-foreground bg-card sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1 text-[10px] font-semibold tracking-wider uppercase">
+                  <span className="min-w-0 flex-1">Name</span>
+                  <span className="w-24 shrink-0 text-right">Modified</span>
+                  <span className="w-16 shrink-0 text-right">Size</span>
+                </div>
+                <ul className="p-1" role="listbox" aria-multiselectable>
+                  {items.map((item, i) => {
+                    const isSelected = selection.selected.has(item.Path);
+                    const visual = item.IsDir ? null : fileVisual(item.Name);
+                    return (
+                      <li
+                        key={item.Path}
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={(e) =>
+                          setSelection((s) =>
+                            applyClick(s, keys, i, {
+                              meta: e.metaKey || e.ctrlKey,
+                              shift: e.shiftKey,
+                            }),
+                          )
                         }
-                      }}
-                      className={cn(
-                        "flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-sm select-none",
-                        isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
-                      )}
-                    >
-                      {item.IsDir ? (
-                        <Folder className="text-primary size-4 shrink-0" />
-                      ) : (
-                        <File className="text-muted-foreground size-4 shrink-0" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate">{item.Name}</span>
-                      {paneFs !== null && renderItemBadge?.(item, { fs: paneFs, path: pane.path })}
-                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                        {item.IsDir ? "—" : formatBytes(item.Size)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+                        onDoubleClick={() => enterDir(item)}
+                        onContextMenu={() => {
+                          if (!isSelected) {
+                            setSelection({ selected: new Set([item.Path]), anchor: i });
+                          }
+                        }}
+                        className={cn(
+                          "flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-sm select-none",
+                          isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+                        )}
+                      >
+                        {item.IsDir ? (
+                          <Folder className="fill-primary/15 text-primary size-4 shrink-0" />
+                        ) : (
+                          (() => {
+                            const FileIcon = visual!.icon;
+                            return (
+                              <FileIcon className={cn("size-4 shrink-0", visual!.className)} />
+                            );
+                          })()
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{item.Name}</span>
+                        {paneFs !== null &&
+                          renderItemBadge?.(item, { fs: paneFs, path: pane.path })}
+                        <span className="text-muted-foreground w-24 shrink-0 truncate text-right text-xs tabular-nums">
+                          {item.ModTime ? formatDateTime(item.ModTime).split(",")[0] : "—"}
+                        </span>
+                        <span className="text-muted-foreground w-16 shrink-0 text-right text-xs tabular-nums">
+                          {item.IsDir ? "—" : formatBytes(item.Size)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </ContextMenuTrigger>
             <ContextMenuContent>
               {selectedItems.length > 0 && pane.fs && (
@@ -361,9 +384,18 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
         )}
       </div>
 
-      <footer className="text-muted-foreground border-t px-3 py-1 text-xs">
-        {items.length} items
-        {selection.selected.size > 0 && <> · {selection.selected.size} selected</>}
+      <footer className="text-muted-foreground flex items-center justify-between border-t px-3 py-1 text-xs tabular-nums">
+        <span>
+          {items.filter((i) => i.IsDir).length} folders · {items.filter((i) => !i.IsDir).length}{" "}
+          files
+        </span>
+        <span>
+          {selection.selected.size > 0
+            ? `${selection.selected.size} selected · ${formatBytes(
+                selectedItems.reduce((sum, i) => sum + (i.IsDir ? 0 : i.Size), 0),
+              )}`
+            : formatBytes(items.reduce((sum, i) => sum + (i.IsDir ? 0 : i.Size), 0))}
+        </span>
       </footer>
 
       <Dialog open={mkdirOpen} onOpenChange={setMkdirOpen}>
