@@ -13,9 +13,9 @@ describe("App", () => {
   it("navigates between views from the sidebar", async () => {
     render(<App />);
     await screen.findByText("RcloneGUI");
-    await userEvent.click(screen.getByRole("button", { name: /Remotes/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Remotes" }));
     expect(await screen.findByRole("heading", { name: "Remotes" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Settings/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
   });
 });

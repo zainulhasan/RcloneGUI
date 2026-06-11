@@ -2,6 +2,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+// jsdom lacks ResizeObserver; Radix tooltips (sidebar) need it.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+window.ResizeObserver = window.ResizeObserver ?? (ResizeObserverStub as never);
+
 // jsdom does not implement matchMedia; the theme store relies on it.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
