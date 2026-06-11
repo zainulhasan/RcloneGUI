@@ -6,6 +6,7 @@ export type View =
   | "browser"
   | "transfers"
   | "mounts"
+  | "serve"
   | "scheduler"
   | "media"
   | "logs"

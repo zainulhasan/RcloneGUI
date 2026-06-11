@@ -143,6 +143,24 @@ describe("RcClient command shaping", () => {
     });
   });
 
+  it("command runs core/command as an async stderr-streaming job", async () => {
+    const { transport, calls } = stubTransport({ jobid: 11 });
+    const job = await new RcClient(transport).command("serve", ["http", "gdrive:films"], {
+      addr: ":8080",
+    });
+    expect(job).toEqual({ jobid: 11 });
+    expect(calls[0]).toEqual({
+      method: "core/command",
+      params: {
+        command: "serve",
+        arg: ["http", "gdrive:films"],
+        opt: { addr: ":8080" },
+        returnType: "STREAM_ONLY_STDERR",
+        _async: true,
+      },
+    });
+  });
+
   it("listMounts tolerates a null mountPoints", async () => {
     const { transport } = stubTransport({ mountPoints: null });
     expect(await new RcClient(transport).listMounts()).toEqual([]);
