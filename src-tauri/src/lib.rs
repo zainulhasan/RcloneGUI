@@ -4,7 +4,7 @@ pub mod disk;
 pub mod rclone;
 
 use background::AppFlags;
-use commands::DaemonState;
+use commands::{DaemonState, StartLock};
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -34,6 +34,7 @@ pub fn run() {
                 .build(),
         )
         .manage(DaemonState::default())
+        .manage(StartLock::default())
         .manage(AppFlags::default())
         .setup(|app| {
             background::setup_tray(app.handle())?;

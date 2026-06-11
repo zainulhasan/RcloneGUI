@@ -8,10 +8,16 @@ use tauri::State;
 use crate::disk;
 use crate::rclone::daemon::{self, DaemonHandle, DaemonStatus};
 use crate::rclone::detect::{self, RcloneInfo};
-use crate::rclone::{port, proxy};
+use crate::rclone::{port, proxy, stale};
 
 #[derive(Default)]
 pub struct DaemonState(pub Mutex<Option<DaemonHandle>>);
+
+/// Serializes `daemon_start` so concurrent calls (e.g. React strict-mode
+/// double effects) can't both pass the "already running" check and spawn
+/// two daemons.
+#[derive(Default)]
+pub struct StartLock(pub tokio::sync::Mutex<()>);
 
 impl DaemonState {
     pub fn status(&self) -> DaemonStatus {
@@ -36,6 +42,7 @@ impl DaemonState {
         if let Ok(mut guard) = self.0.lock() {
             if let Some(mut handle) = guard.take() {
                 let _ = handle.stop();
+                stale::clear_pid(&stale::default_pidfile());
             }
         }
     }
@@ -53,8 +60,10 @@ pub fn detect_rclone(configured_path: Option<String>) -> Option<RcloneInfo> {
 #[tauri::command]
 pub async fn daemon_start(
     state: State<'_, DaemonState>,
+    start_lock: State<'_, StartLock>,
     configured_path: Option<String>,
 ) -> Result<DaemonStatus, String> {
+    let _serialized = start_lock.0.lock().await;
     let current = state.status();
     if current.running {
         return Ok(current);
@@ -63,9 +72,13 @@ pub async fn daemon_start(
     let binary = detect::find_rclone(configured_path.as_deref())
         .ok_or_else(|| "rclone binary not found".to_string())?;
 
+    // A previous instance that died uncleanly may have left its daemon behind.
+    stale::kill_stale(&stale::default_pidfile());
+
     let rc_port = port::pick_free_port().map_err(|e| format!("no free port: {e}"))?;
     let handle = daemon::spawn_daemon(&binary.to_string_lossy(), rc_port)
         .map_err(|e| format!("failed to start rclone daemon: {e}"))?;
+    stale::record_pid(&stale::default_pidfile(), handle.pid());
 
     // Store before the readiness wait so a failed wait still gets cleaned up.
     {
