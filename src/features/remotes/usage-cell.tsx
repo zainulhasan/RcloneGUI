@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Progress } from "@/components/ui/progress";
 import { rc } from "@/lib/rc-client";
+import { useHostKey } from "@/lib/rc-client/host-key";
 import { formatBytes } from "@/lib/format";
 
 /** Storage usage for one remote; "—" for backends without `about` support. */
 export function UsageCell({ name }: { name: string }) {
   const about = useQuery({
-    queryKey: ["remote-about", name],
+    queryKey: useHostKey("remote-about", name),
     queryFn: () => rc.about(`${name}:`),
     staleTime: 5 * 60_000,
     retry: false,

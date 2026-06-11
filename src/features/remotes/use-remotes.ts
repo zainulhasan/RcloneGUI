@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { rc } from "@/lib/rc-client";
+import { useHostKey } from "@/lib/rc-client/host-key";
 
 /** All configured remotes with their config (type, parameters). */
 export function useRemotes() {
+  const key = useHostKey("remotes");
   return useQuery({
-    queryKey: ["remotes"],
+    queryKey: key,
     queryFn: () => rc.configDump(),
   });
 }

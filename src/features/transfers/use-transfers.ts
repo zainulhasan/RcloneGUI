@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { create } from "zustand";
 
 import { rc } from "@/lib/rc-client";
+import { useHostKey } from "@/lib/rc-client/host-key";
 import { logActivity } from "@/store/activity";
 import { useJobsStore } from "@/store/jobs";
 
@@ -27,8 +28,9 @@ const useSpeedSamplesStore = create<SpeedSamplesState>((set) => ({
  * also appends to the bandwidth-history window.
  */
 export function useCoreStats(enabled = true) {
+  const key = useHostKey("core-stats");
   return useQuery({
-    queryKey: ["core-stats"],
+    queryKey: key,
     queryFn: async () => {
       const stats = await rc.stats();
       useSpeedSamplesStore.getState().push(stats.speed);
@@ -110,8 +112,9 @@ export function useJobCompletionWatcher() {
 
 /** Per-job stats (speed, ETA, transferring files) scoped by group. */
 export function useJobStats(group: string, enabled: boolean) {
+  const key = useHostKey("job-stats", group);
   return useQuery({
-    queryKey: ["job-stats", group],
+    queryKey: key,
     queryFn: () => rc.stats(group),
     refetchInterval: POLL_MS,
     enabled,

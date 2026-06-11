@@ -29,9 +29,23 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useQuery } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { rc } from "@/lib/rc-client";
+import { useHostKey } from "@/lib/rc-client/host-key";
+import { LOCAL_HOST_ID, useHostStore, useIsLocalHost } from "@/store/host";
+import { useSettingsStore } from "@/store/settings";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useNavigationStore, type View } from "@/store/navigation";
 import { resolveTheme, useThemeStore } from "@/store/theme";
 
@@ -82,6 +96,46 @@ const VIEW_TITLES: Record<View, string> = {
   settings: "Settings",
 };
 
+function HostPicker() {
+  const hosts = useSettingsStore((s) => s.settings.hosts);
+  const activeHostId = useHostStore((s) => s.activeHostId);
+  const setActiveHost = useHostStore((s) => s.setActiveHost);
+
+  const health = useQuery({
+    queryKey: useHostKey("host-health"),
+    queryFn: () => rc.version(),
+    refetchInterval: 10_000,
+    retry: false,
+  });
+
+  if (hosts.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        aria-label={health.isError ? "Host unreachable" : "Host connected"}
+        className={cn(
+          "size-2 rounded-full",
+          health.isError ? "bg-destructive" : health.data ? "bg-success" : "bg-muted-foreground/40",
+        )}
+      />
+      <Select value={activeHostId} onValueChange={setActiveHost}>
+        <SelectTrigger size="sm" className="w-36" aria-label="Active host">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={LOCAL_HOST_ID}>Local</SelectItem>
+          {hosts.map((h) => (
+            <SelectItem key={h.id} value={h.id}>
+              {h.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function ThemeToggle() {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
@@ -107,6 +161,14 @@ function ThemeToggle() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const view = useNavigationStore((s) => s.view);
   const navigate = useNavigationStore((s) => s.navigate);
+  const isLocal = useIsLocalHost();
+  // The media workflow writes to THIS machine's watch folder — local only.
+  const visibleSections = isLocal
+    ? NAV_SECTIONS
+    : NAV_SECTIONS.map((s) => ({
+        ...s,
+        items: s.items.filter((i) => i.view !== "media"),
+      }));
 
   return (
     <SidebarProvider>
@@ -128,7 +190,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
 
         <SidebarContent>
-          {NAV_SECTIONS.map((section, i) => (
+          {visibleSections.map((section, i) => (
             <SidebarGroup key={i}>
               {section.label && <SidebarGroupLabel>{section.label}</SidebarGroupLabel>}
               <SidebarGroupContent>
@@ -172,7 +234,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
           <span className="text-sm font-medium">{VIEW_TITLES[view]}</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <HostPicker />
             <ThemeToggle />
           </div>
         </header>

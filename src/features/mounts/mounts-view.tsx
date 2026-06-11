@@ -28,6 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRemotes } from "@/features/remotes/use-remotes";
 import { rc } from "@/lib/rc-client";
+import { useHostKey } from "@/lib/rc-client/host-key";
 import { formatDateTime } from "@/lib/format";
 import { logActivity } from "@/store/activity";
 import { useSavedMountsStore } from "@/store/saved-mounts";
@@ -43,8 +44,9 @@ const CACHE_MODE_HELP: Record<MountFormOptions["cacheMode"], string> = {
 };
 
 function useMounts() {
+  const key = useHostKey("mounts");
   return useQuery({
-    queryKey: ["mounts"],
+    queryKey: key,
     queryFn: () => rc.listMounts(),
     refetchInterval: 5000,
   });
