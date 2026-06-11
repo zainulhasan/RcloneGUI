@@ -35,6 +35,14 @@ test.beforeEach(async ({ page }) => {
           return [];
         case "disk_free":
           return 250 * 1024 ** 3;
+        case "set_hide_on_close":
+        case "tray_status":
+          return null;
+        case "plugin:autostart|is_enabled":
+          return false;
+        case "plugin:autostart|enable":
+        case "plugin:autostart|disable":
+          return null;
         case "rc_call":
           return rcResponses((args as { method: string }).method);
         // tauri-plugin-store
@@ -94,6 +102,9 @@ test("navigates to Remotes and Settings without errors", async ({ page }) => {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await expect(page.getByText("rclone binary path")).toBeVisible();
+  // v0.2 background mode controls
+  await expect(page.getByText("Keep running in the tray")).toBeVisible();
+  await expect(page.getByText("Launch at login")).toBeVisible();
 
   expect(errors).toEqual([]);
 });
