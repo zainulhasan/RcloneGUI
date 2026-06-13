@@ -75,8 +75,8 @@ function useLibrary(fs: string | null, path: string, scanKey: number) {
     queryKey: ["media", "library", fs, path, scanKey],
     enabled: fs !== null && scanKey > 0,
     queryFn: async (): Promise<LibraryEntry[]> => {
-      const listing = await rc.list(fs!, path);
-      const videos = listing.filter((i) => !i.IsDir && isVideoFile(i.Name));
+      const listing = await rc.list(fs!, path, { recurse: true, filesOnly: true });
+      const videos = listing.filter((i) => isVideoFile(i.Name));
       return Promise.all(
         videos.map(async (item) => {
           const { title, year } = parseFilename(item.Name);
