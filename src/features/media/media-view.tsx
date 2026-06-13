@@ -49,6 +49,7 @@ import { getStreamUrl } from "./stream-actions";
 import { searchMovie, type TmdbMovie } from "./tmdb";
 import { runCleanupNow } from "./use-cleanup-runner";
 import { useLocalCopies, useMarkWatched, useWatchedPaths } from "./use-media";
+import { VideoPlayer } from "./video-player";
 import { deleteLocalCopy, openLocal, startWatchSync } from "./watch-actions";
 import type { WatchJobMeta } from "./types";
 
@@ -220,6 +221,7 @@ function PosterCard({
 }) {
   const [hover, setHover] = useState(false);
   const [streaming, setStreaming] = useState(false);
+  const [playerOpen, setPlayerOpen] = useState(false);
   const markWatched = useMarkWatched();
   const queryClient = useQueryClient();
 
@@ -252,12 +254,16 @@ function PosterCard({
         await openLocal(url);
         toast.success(`Opening "${title}"`, { description: "Streaming in your default player" });
       } else {
-        toast.info("Direct stream unavailable for this remote", {
-          description: "Download the file first, or mount the remote via the Mounts tab.",
+        toast.info(`"${title}" can't be streamed directly`, {
+          description: "Hit Download to save it locally, then play it in the built-in player.",
+          duration: 6000,
         });
       }
-    } catch (err) {
-      toast.error(`Stream failed: ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      toast.info(`"${title}" can't be streamed directly`, {
+        description: "Hit Download to save it locally, then play it in the built-in player.",
+        duration: 6000,
+      });
     } finally {
       setStreaming(false);
     }
@@ -367,13 +373,22 @@ function PosterCard({
           >
             {/* Primary: Play local, Retry if failed, or Open/Download pair */}
             {localPath ? (
-              <button
-                className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                onClick={() => void openLocal(localPath)}
-                aria-label={`Play ${title}`}
-              >
-                <Play className="size-5 ml-0.5" />
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                  onClick={() => setPlayerOpen(true)}
+                  aria-label={`Play ${title}`}
+                >
+                  <Play className="size-5 ml-0.5" />
+                </button>
+                <button
+                  className="text-white/70 text-[10px] hover:text-white transition-colors flex items-center gap-1"
+                  onClick={() => void openLocal(localPath)}
+                  aria-label={`Open ${title} in external player`}
+                >
+                  Open in external player
+                </button>
+              </div>
             ) : isFailed ? (
               <button
                 className="h-8 px-3 rounded-full bg-destructive/90 text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform"
@@ -448,6 +463,10 @@ function PosterCard({
       </div>
 
       {/* ── below the poster ── */}
+      {playerOpen && localPath && (
+        <VideoPlayer localPath={localPath} title={title} onClose={() => setPlayerOpen(false)} />
+      )}
+
       <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground tabular-nums px-0.5">
         <span>{year ?? "—"}</span>
         {isDownloading ? (
