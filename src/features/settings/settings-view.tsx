@@ -365,6 +365,16 @@ export function SettingsView() {
             aria-label="Delete when marked watched"
           />
         </Row>
+        <Row
+          label="Video player"
+          hint='Leave empty to use the system default. Enter a name like "VLC" (macOS) or a full path like /usr/bin/vlc (Linux/Windows).'
+        >
+          <Input
+            placeholder="system default"
+            value={settings.preferredPlayer ?? ""}
+            onChange={(e) => void update({ preferredPlayer: e.target.value.trim() || null })}
+          />
+        </Row>
       </Section>
 
       <Section

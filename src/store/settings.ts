@@ -37,6 +37,8 @@ export interface AppSettings {
   tmdbApiKey: string | null;
   /** Show the Media Library tab. Off = media nav item hidden and routes disabled. */
   mediaEnabled: boolean;
+  /** Preferred video player for local Watch files. Empty = system default. e.g. "VLC" on macOS. */
+  preferredPlayer: string | null;
   /** Keep running in the tray when the window is closed. */
   runInBackground: boolean;
   /** Remote rclone daemons the host picker can switch to. */
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cleanup: { afterHours: null, sizeCapGb: null, watchedOnly: true },
   tmdbApiKey: null,
   mediaEnabled: true,
+  preferredPlayer: null,
   runInBackground: true,
   hosts: [],
 };

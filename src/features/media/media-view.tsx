@@ -455,9 +455,13 @@ function PosterCard({
             <Loader2 className="size-3 animate-spin" /> Downloading
           </span>
         ) : isFailed ? (
-          <span className="ml-auto text-destructive flex items-center gap-1">
-            <RotateCcw className="size-3" /> Failed
-          </span>
+          <button
+            className="ml-auto text-destructive flex items-center gap-1 hover:text-destructive/80 transition-colors"
+            onClick={() => void startWatchSync(entry.item, { fs })}
+            aria-label={`Retry download of ${title}`}
+          >
+            <RotateCcw className="size-3" /> Retry
+          </button>
         ) : localPath && !watched ? (
           <span className="ml-auto text-primary flex items-center gap-1">
             <HardDrive className="size-3" /> Ready to play

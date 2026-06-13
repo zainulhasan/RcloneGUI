@@ -33,3 +33,8 @@ export function daemonStatus(): Promise<DaemonStatus> {
 export function diskFree(path: string): Promise<number> {
   return invoke("disk_free", { path });
 }
+
+/** Open a local file with a specific player app/binary. */
+export function openWithPlayer(player: string, path: string): Promise<void> {
+  return invoke("open_with_player", { player, path });
+}

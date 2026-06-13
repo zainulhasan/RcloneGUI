@@ -59,6 +59,7 @@ pub fn run() {
             commands::disk_free,
             commands::lan_ip,
             commands::free_port,
+            commands::open_with_player,
             background::set_hide_on_close,
             background::tray_status,
         ])
