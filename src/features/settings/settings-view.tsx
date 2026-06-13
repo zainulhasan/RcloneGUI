@@ -427,17 +427,32 @@ export function SettingsView() {
 
       <Section
         title="Media library"
-        description="Posters and metadata come from TMDB with your own free API key (themoviedb.org)."
+        description="Scan cloud folders, fetch TMDB poster art, stream or download movies locally."
       >
-        <Row label="TMDB API key">
-          <Input
-            type="password"
-            className="font-mono text-xs"
-            placeholder="paste your API key"
-            value={settings.tmdbApiKey ?? ""}
-            onChange={(e) => void update({ tmdbApiKey: e.target.value.trim() || null })}
+        <Row
+          label="Enable media library"
+          hint="Shows the Media tab in the sidebar. Turn off to keep a lean rclone-only UI."
+        >
+          <Switch
+            checked={settings.mediaEnabled}
+            onCheckedChange={(v) => void update({ mediaEnabled: v })}
+            aria-label="Enable media library"
           />
         </Row>
+        {settings.mediaEnabled && (
+          <Row
+            label="TMDB API key"
+            hint="Free key from themoviedb.org — used for poster art and metadata."
+          >
+            <Input
+              type="password"
+              className="font-mono text-xs"
+              placeholder="paste your API key"
+              value={settings.tmdbApiKey ?? ""}
+              onChange={(e) => void update({ tmdbApiKey: e.target.value.trim() || null })}
+            />
+          </Row>
+        )}
       </Section>
 
       <HostsSection />

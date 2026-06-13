@@ -163,13 +163,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const view = useNavigationStore((s) => s.view);
   const navigate = useNavigationStore((s) => s.navigate);
   const isLocal = useIsLocalHost();
-  // The media workflow writes to THIS machine's watch folder — local only.
-  const visibleSections = isLocal
-    ? NAV_SECTIONS
-    : NAV_SECTIONS.map((s) => ({
-        ...s,
-        items: s.items.filter((i) => i.view !== "media"),
-      }));
+  const mediaEnabled = useSettingsStore((s) => s.settings.mediaEnabled);
+  // Media is local-only AND requires the feature toggle to be on.
+  const visibleSections = NAV_SECTIONS.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => i.view !== "media" || (isLocal && mediaEnabled)),
+  }));
 
   return (
     <SidebarProvider>

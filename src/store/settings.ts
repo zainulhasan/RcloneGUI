@@ -35,6 +35,8 @@ export interface AppSettings {
   cleanup: CleanupRules;
   /** TMDB API key for the media library view (user-supplied). */
   tmdbApiKey: string | null;
+  /** Show the Media Library tab. Off = media nav item hidden and routes disabled. */
+  mediaEnabled: boolean;
   /** Keep running in the tray when the window is closed. */
   runInBackground: boolean;
   /** Remote rclone daemons the host picker can switch to. */
@@ -51,6 +53,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   deleteOnMarkWatched: false,
   cleanup: { afterHours: null, sizeCapGb: null, watchedOnly: true },
   tmdbApiKey: null,
+  mediaEnabled: true,
   runInBackground: true,
   hosts: [],
 };
