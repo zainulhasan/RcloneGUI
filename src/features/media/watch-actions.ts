@@ -112,7 +112,8 @@ export async function handleWatchSyncComplete(meta: WatchJobMeta): Promise<void>
   }
 }
 
-/** Open a local file or URL, using the preferred player if configured. */
+/** Open a local file or URL, using the preferred player if configured.
+ * Falls back to VLC auto-detection then the system default. */
 export async function openLocal(path: string): Promise<void> {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
@@ -120,12 +121,8 @@ export async function openLocal(path: string): Promise<void> {
     return;
   }
   const { preferredPlayer } = useSettingsStore.getState().settings;
-  if (preferredPlayer) {
-    await openWithPlayer(preferredPlayer, path);
-  } else {
-    const { openPath } = await import("@tauri-apps/plugin-opener");
-    await openPath(path);
-  }
+  // Empty string → Rust open_auto: tries VLC first, then system default
+  await openWithPlayer(preferredPlayer ?? "", path);
 }
 
 /**
