@@ -8,6 +8,7 @@ import {
   Home,
   Moon,
   ScrollText,
+  Search,
   Share2,
   Server,
   Settings,
@@ -239,6 +240,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
           <span className="text-sm font-medium">{VIEW_TITLES[view]}</span>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              className="text-muted-foreground border-input bg-surface hover:border-border-strong hidden h-8 w-[220px] items-center gap-2 rounded-[var(--radius-sm)] border px-2.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+              aria-label="Search (⌘K)"
+            >
+              <Search className="size-3.5 shrink-0" />
+              <span className="flex-1 text-left">Search remotes, files…</span>
+              <span className="flex items-center gap-0.5 opacity-60">
+                <kbd className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
+                <kbd className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">K</kbd>
+              </span>
+            </button>
             <HostPicker />
             <ThemeToggle />
           </div>
