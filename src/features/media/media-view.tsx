@@ -106,7 +106,7 @@ function useBrowseDirs(fs: string | null, browsePath: string, enabled: boolean) 
   return useQuery({
     queryKey: ["media", "browse-dirs", fs, browsePath],
     enabled: enabled && fs !== null,
-    queryFn: () => rc.list(fs!, browsePath).then((items) => items.filter((i) => i.IsDir)),
+    queryFn: () => rc.list(fs!, browsePath ?? "").then((items) => items.filter((i) => i.IsDir)),
     staleTime: 30_000,
   });
 }
@@ -252,7 +252,7 @@ function PosterCard({
         });
       }
     } catch (err) {
-      toast.error(`Stream failed: ${(err as Error).message}`);
+      toast.error(`Stream failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setStreaming(false);
     }

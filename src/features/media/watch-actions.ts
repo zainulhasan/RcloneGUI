@@ -59,18 +59,29 @@ export async function startWatchSync(
     isDir: item.IsDir,
   };
 
+  const resumeOpts = {
+    config: {
+      Retries: 20,
+      RetriesSleep: "5s",
+      LowLevelRetries: 20,
+      MultiThreadStreams: 4,
+      MultiThreadCutoff: "256M",
+    },
+  };
+
   try {
     const job = item.IsDir
-      ? await rc.copy(`${joinFs(pane.fs, item.Path)}`, localPath)
-      : await rc.copyFile(pane.fs, item.Path, watchFolder, item.Name);
+      ? await rc.copy(`${joinFs(pane.fs, item.Path)}`, localPath, resumeOpts)
+      : await rc.copyFile(pane.fs, item.Path, watchFolder, item.Name, resumeOpts);
     useJobsStore
       .getState()
       .track({ jobid: job.jobid, label: `Watch: ${item.Name}`, kind: "watch", meta });
     logActivity("info", "media", `Watch sync started for "${item.Name}" (job ${job.jobid})`);
     toast.success(`Syncing "${item.Name}" to your Watch Folder`);
   } catch (err) {
-    toast.error(`Could not start sync: ${(err as Error).message}`);
-    logActivity("error", "media", `Watch sync failed to start: ${(err as Error).message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    toast.error(`Could not start sync: ${msg}`);
+    logActivity("error", "media", `Watch sync failed to start: ${msg}`);
   }
 }
 
@@ -96,15 +107,22 @@ export async function handleWatchSyncComplete(meta: WatchJobMeta): Promise<void>
     try {
       await openLocal(meta.localPath);
     } catch (err) {
-      toast.error(`Could not open "${meta.name}": ${(err as Error).message}`);
+      toast.error(
+        `Could not open "${meta.name}": ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 }
 
-/** Open a local file with the OS default application. */
+/** Open a local file or URL with the OS default application/browser. */
 export async function openLocal(path: string): Promise<void> {
-  const { openPath } = await import("@tauri-apps/plugin-opener");
-  await openPath(path);
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(path);
+  } else {
+    const { openPath } = await import("@tauri-apps/plugin-opener");
+    await openPath(path);
+  }
 }
 
 /**
