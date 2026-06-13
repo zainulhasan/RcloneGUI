@@ -104,6 +104,15 @@ export class WatchedDb {
     return rows.map(rowToItem);
   }
 
+  /** remote_path → local_path for all downloaded (not yet deleted) files on one fs. */
+  async localCopies(remoteFs: string): Promise<Map<string, string>> {
+    const rows = await this.db.select<{ remote_path: string; local_path: string }[]>(
+      `SELECT remote_path, local_path FROM media_items WHERE remote_fs = $1 AND local_path IS NOT NULL AND local_deleted_at IS NULL`,
+      [remoteFs],
+    );
+    return new Map(rows.map((r) => [r.remote_path, r.local_path]));
+  }
+
   /** Watched remote paths within one fs — used for browser badges. */
   async watchedPaths(remoteFs: string): Promise<Set<string>> {
     const rows = await this.db.select<{ remote_path: string }[]>(

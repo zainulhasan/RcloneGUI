@@ -1,22 +1,28 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BrushCleaning,
   Check,
   ChevronLeft,
   Clapperboard,
+  Download,
   Eye,
   FolderOpen,
   FolderSearch,
+  HardDrive,
+  Loader2,
+  MonitorPlay,
   Play,
   RefreshCw,
   Search,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -28,15 +34,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/layout/page";
 import { useRemotes } from "@/features/remotes/use-remotes";
+import { useJobStats } from "@/features/transfers/use-transfers";
 import { rc, type RcListItem } from "@/lib/rc-client";
+import { formatBytes, formatSpeed } from "@/lib/format";
 import { useSettingsStore } from "@/store/settings";
+import { useJobsStore } from "@/store/jobs";
 import { cn } from "@/lib/utils";
 
 import { isVideoFile, parseFilename } from "./filename-parser";
+import { getStreamUrl } from "./stream-actions";
 import { searchMovie, type TmdbMovie } from "./tmdb";
 import { runCleanupNow } from "./use-cleanup-runner";
-import { useMarkWatched, useWatchedPaths } from "./use-media";
-import { startWatchSync } from "./watch-actions";
+import { useLocalCopies, useMarkWatched, useWatchedPaths } from "./use-media";
+import { deleteLocalCopy, openLocal, startWatchSync } from "./watch-actions";
+import type { WatchJobMeta } from "./types";
 
 // ── persistence ───────────────────────────────────────────────────────────────
 const PERSIST_KEY = "media-library-v1";
@@ -117,7 +128,9 @@ function FolderBrowser({ fs, onSelect }: { fs: string | null; onSelect: (path: s
   };
 
   const goUp = () => {
-    const parent = browsePath.split("/").slice(0, -1).join("/");
+    const parts = browsePath.split("/").filter(Boolean);
+    parts.pop();
+    const parent = parts.join("/");
     setBrowsePath(parent);
     onSelect(parent);
   };
@@ -125,85 +138,144 @@ function FolderBrowser({ fs, onSelect }: { fs: string | null; onSelect: (path: s
   return (
     <Popover open={open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          disabled={fs === null}
-          aria-label="Browse remote folders"
-        >
+        <Button variant="outline" size="icon" aria-label="Browse folders" disabled={fs === null}>
           <FolderOpen className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-1.5" align="start">
-        {/* Path bar */}
-        <div className="flex items-center gap-1 px-1 pb-1">
-          {browsePath && (
-            <Button variant="ghost" size="icon-sm" onClick={goUp} aria-label="Go up">
-              <ChevronLeft className="size-3.5" />
-            </Button>
-          )}
-          <span className="text-muted-foreground font-mono text-[11px] truncate flex-1">
-            /{browsePath || ""}
+      <PopoverContent className="w-80 p-2" align="end">
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={!browsePath}
+            onClick={goUp}
+            aria-label="Go up"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground font-mono truncate flex-1">
+            {fs}
+            {browsePath || "/"}
           </span>
         </div>
-        <div className="border-b border-border mb-1" />
-
-        {/* Directory list */}
-        {dirs.isFetching ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">Loading…</div>
-        ) : !dirs.data?.length ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No subfolders here</div>
+        {dirs.isLoading ? (
+          <p className="text-xs text-muted-foreground py-4 text-center">Loading…</p>
+        ) : dirs.data?.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-4 text-center">No sub-folders</p>
         ) : (
-          <div className="flex flex-col max-h-52 overflow-y-auto">
-            {dirs.data.map((d) => (
-              <button
-                key={d.Path}
-                className="flex items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] hover:bg-accent transition-colors"
-                onClick={() => navigateInto(d.Path)}
-              >
-                <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">{d.Name}</span>
-              </button>
+          <ul className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+            {dirs.data?.map((d) => (
+              <li key={d.Path}>
+                <button
+                  className="w-full text-left px-2 py-1.5 rounded-[var(--radius)] text-xs hover:bg-accent flex items-center gap-2"
+                  onClick={() => navigateInto(d.Path)}
+                >
+                  <FolderOpen className="size-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{d.Name}</span>
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-
-        {/* Select button */}
-        <div className="border-t border-border mt-1 pt-1">
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={() => {
-              onSelect(browsePath);
-              setOpen(false);
-            }}
-          >
-            Select "{browsePath || "root"}"
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   );
 }
 
+// ── inline download progress ──────────────────────────────────────────────────
+function JobProgress({ group }: { group: string }) {
+  const stats = useJobStats(group, true);
+  const total = stats.data?.totalBytes ?? 0;
+  const bytes = stats.data?.bytes ?? 0;
+  const pct = total > 0 ? Math.min(100, (bytes / total) * 100) : 0;
+  const speed = stats.data?.speed ?? 0;
+  return (
+    <div className="flex flex-col gap-1 px-2 pb-2 pt-1">
+      <Progress value={pct} className="h-1" />
+      <div className="flex justify-between text-[10px] text-white/70 tabular-nums">
+        <span>
+          {formatBytes(bytes)} / {formatBytes(total)}
+        </span>
+        <span>{formatSpeed(speed)}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── poster card ───────────────────────────────────────────────────────────────
-function PosterCard({ entry, fs, watched }: { entry: LibraryEntry; fs: string; watched: boolean }) {
+function PosterCard({
+  entry,
+  fs,
+  watched,
+  localPath,
+}: {
+  entry: LibraryEntry;
+  fs: string;
+  watched: boolean;
+  localPath: string | null;
+}) {
   const [hover, setHover] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const markWatched = useMarkWatched();
+  const queryClient = useQueryClient();
+
   const title = entry.movie?.title ?? entry.title;
   const year = entry.movie?.year ?? entry.year;
 
-  const handlePlay = () => {
-    void startWatchSync(entry.item, { fs });
+  // Find an active or recently-finished watch job for this movie
+  const job = useJobsStore((s) =>
+    s.jobs.find(
+      (j) =>
+        j.kind === "watch" && (j.meta as WatchJobMeta | undefined)?.remotePath === entry.item.Path,
+    ),
+  );
+  const isDownloading = !!job && !job.finished;
+
+  const resolution = entry.item.Name.match(/\b(4K|2160p)\b/i)
+    ? "4K"
+    : entry.item.Name.match(/\b1080p\b/i)
+      ? "1080p"
+      : entry.item.Name.match(/\b720p\b/i)
+        ? "720p"
+        : "HD";
+
+  const handleStream = async () => {
+    setStreaming(true);
+    try {
+      const url = await getStreamUrl(fs, entry.item);
+      if (url) {
+        await openLocal(url);
+        toast.success(`Opening "${title}"`, { description: "Streaming in your default player" });
+      } else {
+        toast.info("Direct stream unavailable for this remote", {
+          description: "Download the file first, or mount the remote via the Mounts tab.",
+        });
+      }
+    } catch (err) {
+      toast.error(`Stream failed: ${(err as Error).message}`);
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!localPath) return;
+    try {
+      await deleteLocalCopy(localPath, entry.item.Name);
+      await queryClient.invalidateQueries({ queryKey: ["media"] });
+      toast.success(`Deleted local copy of "${title}"`);
+    } catch (err) {
+      toast.error(`Delete failed: ${(err as Error).message}`);
+    }
   };
 
   return (
     <div
-      className="group flex flex-col gap-2 cursor-pointer"
+      className="group flex flex-col gap-2"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
+      {/* ── poster image ── */}
       <div
         className="relative aspect-[2/3] rounded-[var(--radius-lg)] overflow-hidden border border-border shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5"
         style={{ background: posterGrad(title) }}
@@ -215,7 +287,7 @@ function PosterCard({ entry, fs, watched }: { entry: LibraryEntry; fs: string; w
             background: "radial-gradient(120% 80% at 50% 0%, oklch(1 0 0 / 0.16), transparent 60%)",
           }}
         />
-        {/* TMDB poster */}
+        {/* TMDB poster image */}
         {entry.movie?.posterUrl && (
           <img
             src={entry.movie.posterUrl}
@@ -224,7 +296,7 @@ function PosterCard({ entry, fs, watched }: { entry: LibraryEntry; fs: string; w
             className="absolute inset-0 size-full object-cover"
           />
         )}
-        {/* Fallback icon (no TMDB) */}
+        {/* Fallback title when no poster art */}
         {!entry.movie?.posterUrl && (
           <div className="absolute inset-0 flex items-end pb-3 px-3">
             <div
@@ -238,72 +310,129 @@ function PosterCard({ entry, fs, watched }: { entry: LibraryEntry; fs: string; w
         {/* Bottom gradient */}
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
 
-        {/* Top badges */}
+        {/* Top badges: resolution + status */}
         <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
           <span className="px-1.5 h-[18px] inline-flex items-center rounded-[5px] bg-black/50 backdrop-blur-sm text-white text-[10px] font-semibold font-mono uppercase">
-            {entry.item.Name.match(/\b(4K|2160p)\b/i)
-              ? "4K"
-              : entry.item.Name.match(/\b1080p\b/i)
-                ? "1080p"
-                : entry.item.Name.match(/\b720p\b/i)
-                  ? "720p"
-                  : "HD"}
+            {resolution}
           </span>
-          {watched && (
-            <span className="size-5 inline-flex items-center justify-center rounded-full bg-success/90 text-success-foreground shadow-sm">
-              <Check className="size-3" />
-            </span>
-          )}
-        </div>
-
-        {/* Hover overlay */}
-        <div
-          className={cn(
-            "absolute inset-0 flex items-center justify-center bg-black/32 transition-opacity duration-200",
-            hover ? "opacity-100" : "opacity-0",
-          )}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <button
-              className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-              onClick={handlePlay}
-              aria-label={`Watch ${title}`}
-            >
-              <Play className="size-5 ml-0.5" />
-            </button>
-            {!watched && (
-              <button
-                className="px-2 py-0.5 rounded-[5px] bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium hover:bg-black/70 transition-colors flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  markWatched.mutate({
-                    id: 0,
-                    remoteFs: fs,
-                    remotePath: entry.item.Path,
-                    name: entry.item.Name,
-                    size: entry.item.Size,
-                    localPath: null,
-                    syncedAt: null,
-                    watchedAt: null,
-                    localDeletedAt: null,
-                  });
-                }}
-              >
-                <Eye className="size-3" /> Mark watched
-              </button>
+          <div className="flex gap-1">
+            {localPath && (
+              <span className="size-5 inline-flex items-center justify-center rounded-full bg-primary/90 text-primary-foreground shadow-sm">
+                <HardDrive className="size-3" />
+              </span>
+            )}
+            {watched && (
+              <span className="size-5 inline-flex items-center justify-center rounded-full bg-success/90 text-success-foreground shadow-sm">
+                <Check className="size-3" />
+              </span>
             )}
           </div>
         </div>
+
+        {/* Download progress — shown over the poster while active */}
+        {isDownloading && job && (
+          <div className="absolute inset-x-0 bottom-0 bg-black/60">
+            <JobProgress group={job.group} />
+          </div>
+        )}
+
+        {/* Hover action overlay */}
+        {!isDownloading && (
+          <div
+            className={cn(
+              "absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-black/40 transition-opacity duration-200",
+              hover ? "opacity-100" : "opacity-0",
+            )}
+          >
+            {/* Primary: Play local or Stream/Download pair */}
+            {localPath ? (
+              <button
+                className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                onClick={() => void openLocal(localPath)}
+                aria-label={`Play ${title}`}
+              >
+                <Play className="size-5 ml-0.5" />
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  className="h-8 px-3 rounded-full bg-white/92 text-gray-900 text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform disabled:opacity-50"
+                  onClick={() => void handleStream()}
+                  disabled={streaming}
+                  aria-label={`Stream ${title}`}
+                >
+                  {streaming ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <MonitorPlay className="size-3" />
+                  )}
+                  Stream
+                </button>
+                <button
+                  className="size-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                  onClick={() => void startWatchSync(entry.item, { fs })}
+                  aria-label={`Download ${title}`}
+                >
+                  <Download className="size-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Secondary: mark watched + delete local */}
+            <div className="flex gap-1.5">
+              {!watched && (
+                <button
+                  className="px-2 py-0.5 rounded-[5px] bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium hover:bg-black/70 transition-colors flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markWatched.mutate({
+                      id: 0,
+                      remoteFs: fs,
+                      remotePath: entry.item.Path,
+                      name: entry.item.Name,
+                      size: entry.item.Size,
+                      localPath,
+                      syncedAt: null,
+                      watchedAt: null,
+                      localDeletedAt: null,
+                    });
+                  }}
+                >
+                  <Eye className="size-3" /> Mark watched
+                </button>
+              )}
+              {localPath && (
+                <button
+                  className="px-2 py-0.5 rounded-[5px] bg-destructive/70 backdrop-blur-sm text-white text-[11px] font-medium hover:bg-destructive/90 transition-colors flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleDelete();
+                  }}
+                >
+                  <Trash2 className="size-3" /> Delete local
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Below poster */}
+      {/* ── below the poster ── */}
       <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground tabular-nums px-0.5">
         <span>{year ?? "—"}</span>
-        {watched && (
+        {isDownloading ? (
+          <span className="ml-auto text-primary flex items-center gap-1">
+            <Loader2 className="size-3 animate-spin" /> Downloading
+          </span>
+        ) : localPath && !watched ? (
+          <span className="ml-auto text-primary flex items-center gap-1">
+            <HardDrive className="size-3" /> Ready to play
+          </span>
+        ) : watched ? (
           <span className="ml-auto text-success flex items-center gap-1">
             <Eye className="size-3" /> Watched
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -328,6 +457,7 @@ export function MediaView() {
 
   const library = useLibrary(fs, path, scanKey);
   const watchedPaths = useWatchedPaths(fs);
+  const localCopies = useLocalCopies(fs);
 
   // Persist fs + path whenever they change
   useEffect(() => {
@@ -338,6 +468,7 @@ export function MediaView() {
 
   const allEntries = library.data ?? [];
   const watchedSet = watchedPaths.data ?? new Set<string>();
+  const localCopiesMap = localCopies.data ?? new Map<string, string>();
   const watchedCount = allEntries.filter((e) => watchedSet.has(e.item.Path)).length;
   const unwatchedCount = allEntries.length - watchedCount;
 
@@ -484,13 +615,14 @@ export function MediaView() {
               entry={entry}
               fs={fs!}
               watched={watchedSet.has(entry.item.Path)}
+              localPath={localCopiesMap.get(entry.item.Path) ?? null}
             />
           ))}
         </div>
       ) : allEntries.length > 0 && search ? (
         <div className="py-16 text-center">
           <p className="text-[14px] font-semibold">No films match "{search}"</p>
-          <p className="text-[12.5px] text-muted-foreground mt-1">
+          <p className="text-[13px] text-muted-foreground mt-1">
             Try a different search or filter.
           </p>
         </div>
