@@ -106,7 +106,7 @@ function StatCard({
           <Icon className="size-4" />
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-muted-foreground text-[12px] font-medium">{title}</span>
+          <span className="text-muted-foreground text-xs font-medium">{title}</span>
           <span className="truncate text-[26px] leading-none font-semibold tracking-tight tabular-nums">
             {value}
           </span>
@@ -236,7 +236,7 @@ export function DashboardView() {
           <Card className="gap-0 overflow-hidden py-0">
             <div className="flex items-stretch">
               <div className="flex shrink-0 flex-col justify-center gap-1 p-4 pr-5">
-                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
+                <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-[0.06em] uppercase">
                   <span
                     className={cn(
                       "size-1.5 rounded-full",
@@ -317,7 +317,7 @@ export function DashboardView() {
           {/* Quick actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Quick actions
               </CardTitle>
             </CardHeader>
@@ -342,9 +342,9 @@ export function DashboardView() {
           {/* Remotes list */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <CardTitle className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <span>Remotes</span>
-                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground tabular-nums">
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground tabular-nums">
                   {remoteCount}
                 </span>
               </CardTitle>
@@ -371,8 +371,8 @@ export function DashboardView() {
                       >
                         <RemoteChip name={name} />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[12.5px] font-medium">{name}:</div>
-                          <div className="text-muted-foreground text-[11px]">{type}</div>
+                          <div className="truncate text-[13px] font-medium">{name}:</div>
+                          <div className="text-muted-foreground text-xs">{type}</div>
                         </div>
                         <span className="size-1.5 shrink-0 rounded-full bg-success" />
                       </div>

@@ -169,7 +169,7 @@ export function TransfersView() {
           <Card className="gap-0 overflow-hidden py-0">
             <div className="flex items-stretch">
               <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
-                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
+                <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-[0.06em] uppercase">
                   <span
                     className={cn(
                       "size-1.5 rounded-full",
@@ -210,7 +210,7 @@ export function TransfersView() {
                   },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <div className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap">
+                    <div className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.06em] whitespace-nowrap">
                       {label}
                     </div>
                     <div className="text-[18px] font-semibold tracking-tight tabular-nums">
