@@ -169,7 +169,7 @@ export function TransfersView() {
           <Card className="gap-0 overflow-hidden py-0">
             <div className="flex items-stretch">
               <div className="flex shrink-0 flex-col justify-center gap-1 py-4 pr-6 pl-5">
-                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
                   <span
                     className={cn(
                       "size-1.5 rounded-full",
@@ -178,9 +178,9 @@ export function TransfersView() {
                         : "bg-muted-foreground/40",
                     )}
                   />
-                  Current speed
+                  Combined throughput
                 </span>
-                <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                <span className="text-[40px] font-semibold leading-none tracking-tight tabular-nums">
                   {formatSpeed(stats.data?.speed ?? 0)}
                 </span>
                 <span className="text-muted-foreground text-xs tabular-nums">
@@ -195,6 +195,29 @@ export function TransfersView() {
                 <div className="h-20">
                   <Sparkline samples={samples} capacity={SPARKLINE_SAMPLES} />
                 </div>
+              </div>
+              {/* Queue summary */}
+              <div className="border-border flex shrink-0 flex-col justify-center gap-3 border-l px-6">
+                {[
+                  {
+                    label: "Active",
+                    value: activeJobs.filter((j) => !j.finished).length,
+                  },
+                  { label: "Files", value: stats.data?.transfers ?? 0 },
+                  {
+                    label: "ETA",
+                    value: formatEta(stats.data?.eta),
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <div className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap">
+                      {label}
+                    </div>
+                    <div className="text-[18px] font-semibold tracking-tight tabular-nums">
+                      {value}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </Card>

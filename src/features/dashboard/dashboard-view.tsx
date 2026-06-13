@@ -1,11 +1,16 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  AlertTriangle,
   ArrowLeftRight,
   CheckCircle2,
   FolderTree,
   HardDrive,
+  Info,
+  Plus,
   Server,
+  Share2,
   XCircle,
 } from "lucide-react";
 
@@ -14,15 +19,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page";
 import { useRcloneInfo } from "@/features/health/use-daemon";
 import { useRemotes } from "@/features/remotes/use-remotes";
-import { rc } from "@/lib/rc-client";
+import { Sparkline } from "@/features/transfers/sparkline";
+import {
+  SPARKLINE_SAMPLES,
+  useCoreStats,
+  useSpeedSamples,
+} from "@/features/transfers/use-transfers";
 import { daemonStatus, diskFree } from "@/lib/tauri";
-import { formatBytes } from "@/lib/format";
+import { formatBytes, formatSpeed } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useActivityStore, type ActivityLevel } from "@/store/activity";
 import { useJobsStore } from "@/store/jobs";
 import { useNavigationStore } from "@/store/navigation";
 import { useSettingsStore } from "@/store/settings";
 
+// ── remote color chip ─────────────────────────────────────────────────────────
+const CHIP_COLORS = [
+  "oklch(0.66 0.18 257)",
+  "oklch(0.72 0.14 145)",
+  "oklch(0.78 0.15 60)",
+  "oklch(0.69 0.16 300)",
+  "oklch(0.64 0.2 20)",
+  "oklch(0.72 0.14 192)",
+];
+
+function chipColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return CHIP_COLORS[Math.abs(h) % CHIP_COLORS.length];
+}
+
+function RemoteChip({ name }: { name: string }) {
+  const color = chipColor(name);
+  return (
+    <span
+      className="flex size-7 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold"
+      style={{ background: color + "22", color, border: `1px solid ${color}44` }}
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
+
+// ── stat card ─────────────────────────────────────────────────────────────────
 function StatCard({
   title,
   value,
@@ -58,17 +97,17 @@ function StatCard({
       <CardContent className="flex items-start gap-3">
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+            "flex size-8 shrink-0 items-center justify-center rounded-[5px]",
             tone === "success" && "bg-success/12 text-success",
-            tone === "warning" && "bg-warning/15 text-warning-foreground",
+            tone === "warning" && "bg-warning/15 text-warning",
             tone === "default" && "bg-primary/10 text-primary",
           )}
         >
-          <Icon className="size-4.5" />
+          <Icon className="size-4" />
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-muted-foreground text-xs font-medium">{title}</span>
-          <span className="truncate text-lg leading-tight font-semibold tracking-tight">
+          <span className="text-muted-foreground text-[12px] font-medium">{title}</span>
+          <span className="truncate text-[26px] leading-none font-semibold tracking-tight tabular-nums">
             {value}
           </span>
           {hint && <span className="text-muted-foreground truncate text-xs">{hint}</span>}
@@ -78,12 +117,27 @@ function StatCard({
   );
 }
 
-const LEVEL_DOT: Record<ActivityLevel, string> = {
-  info: "bg-chart-1",
-  warning: "bg-warning",
-  error: "bg-destructive",
+// ── activity level styles ─────────────────────────────────────────────────────
+const LEVEL_ICON: Record<ActivityLevel, typeof Info> = {
+  info: Info,
+  warning: AlertTriangle,
+  error: XCircle,
+};
+const LEVEL_COLOR: Record<ActivityLevel, { fg: string; bg: string }> = {
+  info: { fg: "oklch(0.66 0.18 257)", bg: "oklch(0.66 0.18 257 / 0.12)" },
+  warning: { fg: "oklch(0.79 0.15 73)", bg: "oklch(0.79 0.15 73 / 0.12)" },
+  error: { fg: "oklch(0.635 0.205 23)", bg: "oklch(0.635 0.205 23 / 0.12)" },
 };
 
+// ── quick actions ─────────────────────────────────────────────────────────────
+const QUICK_ACTIONS = [
+  { icon: Plus, label: "Add remote", view: "remotes" },
+  { icon: ArrowLeftRight, label: "New sync", view: "browser" },
+  { icon: HardDrive, label: "Mount drive", view: "mounts" },
+  { icon: Share2, label: "Serve files", view: "serve" },
+] as const;
+
+// ── main view ─────────────────────────────────────────────────────────────────
 export function DashboardView() {
   const navigate = useNavigationStore((s) => s.navigate);
   const info = useRcloneInfo();
@@ -92,8 +146,11 @@ export function DashboardView() {
   const entries = useActivityStore((s) => s.entries);
   const watchFolder = useSettingsStore((s) => s.settings.watchFolder);
 
+  // Polling core stats here ensures the sparkline is populated while on this screen.
+  const stats = useCoreStats();
+  const speedSamples = useSpeedSamples();
+
   const daemon = useQuery({ queryKey: ["daemon-status"], queryFn: () => daemonStatus() });
-  const paths = useQuery({ queryKey: ["config-paths"], queryFn: () => rc.configPaths() });
   const free = useQuery({
     queryKey: ["watch-free", watchFolder],
     queryFn: () => diskFree(watchFolder!),
@@ -104,6 +161,9 @@ export function DashboardView() {
   const activeJobs = jobs.filter((j) => !j.finished).length;
   const recentActivity = entries.slice(-8).reverse();
   const daemonUp = daemon.data?.running ?? false;
+  const currentSpeed = stats.data?.speed ?? 0;
+
+  const remoteList = useMemo(() => Object.keys(remotes.data ?? {}).slice(0, 6), [remotes.data]);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
@@ -122,39 +182,34 @@ export function DashboardView() {
         }
       />
 
+      {/* ── stat cards ── */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
           title="rclone daemon"
           tone={daemonUp ? "success" : "warning"}
           icon={daemonUp ? CheckCircle2 : XCircle}
-          value={
-            <span className="flex items-baseline gap-1.5">
-              {info.data?.version ?? "—"}
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  daemonUp ? "text-success" : "text-destructive",
-                )}
-              >
-                {daemonUp ? "running" : "stopped"}
-              </span>
-            </span>
-          }
-          hint={paths.data?.config}
+          value={info.data?.version ?? "—"}
+          hint={daemonUp ? "running" : "stopped"}
           onClick={() => navigate("settings")}
         />
         <StatCard
           title="Remotes"
           icon={Server}
           value={remoteCount}
-          hint={remoteCount === 0 ? "none yet" : "providers connected"}
+          hint={remoteCount === 0 ? "none configured" : "providers connected"}
           onClick={() => navigate("remotes")}
         />
         <StatCard
           title="Active transfers"
           icon={ArrowLeftRight}
           value={activeJobs}
-          hint={activeJobs === 0 ? "nothing running" : "jobs in flight"}
+          hint={
+            currentSpeed > 0
+              ? formatSpeed(currentSpeed)
+              : activeJobs === 0
+                ? "nothing running"
+                : "jobs in flight"
+          }
           onClick={() => navigate("transfers")}
         />
         <StatCard
@@ -163,46 +218,180 @@ export function DashboardView() {
           tone={watchFolder ? "default" : "warning"}
           value={
             free.data !== undefined ? (
-              `${formatBytes(free.data)} free`
+              formatBytes(free.data)
             ) : (
-              <span className="text-muted-foreground font-normal">not set</span>
+              <span className="text-muted-foreground text-xl font-normal">not set</span>
             )
           }
-          hint={watchFolder ?? "set in Settings"}
+          hint={free.data !== undefined ? "free · " + (watchFolder ?? "") : "set in Settings"}
           onClick={() => navigate(watchFolder ? "media" : "settings")}
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Activity className="text-muted-foreground size-4" />
-            Recent activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentActivity.length === 0 ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">
-              Nothing yet — operations, cleanups and scheduler runs will appear here.
-            </p>
-          ) : (
-            <ul className="divide-border -mx-1 divide-y">
-              {recentActivity.map((e) => (
-                <li key={e.id} className="flex items-center gap-3 px-1 py-2 text-sm">
-                  <span className={cn("size-1.5 shrink-0 rounded-full", LEVEL_DOT[e.level])} />
-                  <span className="min-w-0 flex-1 truncate">{e.message}</span>
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {new Date(e.at).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* ── two-column main grid ── */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
+        {/* Left: throughput sparkline + activity feed */}
+        <div className="flex flex-col gap-4">
+          {/* Throughput strip */}
+          <Card className="gap-0 overflow-hidden py-0">
+            <div className="flex items-stretch">
+              <div className="flex shrink-0 flex-col justify-center gap-1 p-4 pr-5">
+                <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] uppercase">
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      currentSpeed > 0 ? "bg-primary pulse-dot" : "bg-muted-foreground/40",
+                    )}
+                  />
+                  Throughput
+                </span>
+                <span className="text-[32px] font-semibold leading-none tracking-tight tabular-nums">
+                  {formatSpeed(currentSpeed)}
+                </span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {formatBytes(stats.data?.bytes ?? 0)} transferred · {stats.data?.transfers ?? 0}{" "}
+                  files
+                  {(stats.data?.errors ?? 0) > 0 && (
+                    <span className="text-destructive"> · {stats.data?.errors} errors</span>
+                  )}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1 self-end" aria-hidden>
+                <div className="h-[72px]">
+                  <Sparkline samples={speedSamples} capacity={SPARKLINE_SAMPLES} />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Activity feed */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Activity className="text-muted-foreground size-4" />
+                Recent activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentActivity.length === 0 ? (
+                <p className="text-muted-foreground py-6 text-center text-sm">
+                  Nothing yet — operations, cleanups and scheduler runs will appear here.
+                </p>
+              ) : (
+                <ul className="flex flex-col">
+                  {recentActivity.map((e, idx) => {
+                    const LevelIcon = LEVEL_ICON[e.level];
+                    const colors = LEVEL_COLOR[e.level];
+                    return (
+                      <li
+                        key={e.id}
+                        className={cn(
+                          "flex items-center gap-3 py-2.5 text-sm",
+                          idx < recentActivity.length - 1 && "border-b border-border",
+                        )}
+                      >
+                        <span
+                          className="flex size-7 shrink-0 items-center justify-center rounded-[5px]"
+                          style={{ background: colors.bg, color: colors.fg }}
+                        >
+                          <LevelIcon className="size-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{e.message}</span>
+                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                          {new Date(e.at).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: quick actions + remotes list */}
+        <div className="flex flex-col gap-4">
+          {/* Quick actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Quick actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_ACTIONS.map(({ icon: Icon, label, view }) => (
+                  <button
+                    key={view}
+                    onClick={() => navigate(view)}
+                    className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5 text-left transition-colors hover:border-border-strong hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-[5px] bg-primary/15 text-primary">
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="text-[12px] font-medium leading-tight">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Remotes list */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span>Remotes</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground tabular-nums">
+                  {remoteCount}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {remoteList.length === 0 ? (
+                <p className="text-muted-foreground py-4 text-center text-xs">
+                  No remotes yet.{" "}
+                  <button
+                    className="text-primary hover:underline"
+                    onClick={() => navigate("remotes")}
+                  >
+                    Add one
+                  </button>
+                </p>
+              ) : (
+                <div className="-mx-1 flex flex-col gap-0.5">
+                  {remoteList.map((name) => {
+                    const type = remotes.data?.[name]?.type ?? "remote";
+                    return (
+                      <div
+                        key={name}
+                        className="flex items-center gap-2.5 rounded-[5px] px-1 py-1.5 transition-colors hover:bg-accent"
+                      >
+                        <RemoteChip name={name} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[12.5px] font-medium">{name}:</div>
+                          <div className="text-muted-foreground text-[11px]">{type}</div>
+                        </div>
+                        <span className="size-1.5 shrink-0 rounded-full bg-success" />
+                      </div>
+                    );
+                  })}
+                  {remoteCount > 6 && (
+                    <button
+                      className="text-muted-foreground hover:text-foreground mt-1 w-full rounded-[5px] py-1.5 text-[12px] font-medium transition-colors hover:bg-accent"
+                      onClick={() => navigate("remotes")}
+                    >
+                      View all {remoteCount} remotes
+                    </button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
