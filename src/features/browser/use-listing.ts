@@ -11,7 +11,7 @@ export function useListing(fs: string | null, path: string) {
   return useQuery({
     queryKey: key,
 
-    queryFn: () => rc.list(fs!, path),
+    queryFn: () => rc.list(fs!, path ?? ""),
     enabled: fs !== null,
     staleTime: 30_000,
   });

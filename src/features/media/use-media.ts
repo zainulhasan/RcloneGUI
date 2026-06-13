@@ -15,6 +15,16 @@ export function useRecentMedia() {
   });
 }
 
+/** remote_path → local_path for all downloaded files on one fs. */
+export function useLocalCopies(fs: string | null) {
+  return useQuery({
+    queryKey: ["media", "local-copies", fs],
+    queryFn: async () => (await getWatchedDb()).localCopies(fs!),
+    enabled: fs !== null,
+    staleTime: 5_000,
+  });
+}
+
 /** Watched remote paths for one fs — drives badges in the browser. */
 export function useWatchedPaths(fs: string | null) {
   return useQuery({

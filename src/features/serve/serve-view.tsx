@@ -102,15 +102,13 @@ export function ServeView() {
     <div className="flex flex-col gap-4 p-6">
       <PageHeader
         title="Serve"
-        description="Share a remote over your network — to browsers, file managers or smart TVs."
+        description="Expose a remote over your network · browsers, file managers and smart TVs"
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Start sharing</CardTitle>
-          <CardDescription>
-            Runs inside the rclone daemon; stops when the app quits unless saved with auto-start.
-          </CardDescription>
+          <CardTitle className="text-sm">New share</CardTitle>
+          <CardDescription>Stops when the app quits unless saved with auto-start.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid grid-cols-2 items-start gap-x-4 gap-y-3 lg:grid-cols-4">
@@ -248,168 +246,174 @@ export function ServeView() {
         </CardContent>
       </Card>
 
-      {active.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Active shares</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>What</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="w-28 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {active.map(({ jobid, config }) => {
-                  const url = serveUrl(config, lanIp.data ?? "localhost");
-                  return (
-                    <TableRow key={jobid}>
+      {/* ── right: tables ── */}
+      <div className="flex flex-col gap-4">
+        {active.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Active shares</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>What</TableHead>
+                    <TableHead>Protocol</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="w-28 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {active.map(({ jobid, config }) => {
+                    const url = serveUrl(config, lanIp.data ?? "localhost");
+                    return (
+                      <TableRow key={jobid}>
+                        <TableCell className="font-mono text-xs">{config.fs}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{config.protocol}</Badge>
+                          {config.readOnly && (
+                            <Badge variant="outline" className="ml-1">
+                              read-only
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1">
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary font-mono text-xs hover:underline"
+                            >
+                              {url}
+                            </a>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label="Copy URL"
+                                  onClick={() => {
+                                    void navigator.clipboard.writeText(url);
+                                    toast.success("URL copied");
+                                  }}
+                                >
+                                  <Copy />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copy URL</TooltipContent>
+                            </Tooltip>
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              void stopServe(jobid)
+                                .then(() => toast.success("Stopped"))
+                                .catch((err: Error) => toast.error(`Stop failed: ${err.message}`));
+                            }}
+                          >
+                            <Square /> Stop
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {saved.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Saved shares</CardTitle>
+              <CardDescription>
+                Auto-start launches the share when RcloneGUI starts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>What</TableHead>
+                    <TableHead>Protocol</TableHead>
+                    <TableHead>Port</TableHead>
+                    <TableHead>Auto-start</TableHead>
+                    <TableHead className="w-28 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {saved.map((config) => (
+                    <TableRow key={config.id}>
                       <TableCell className="font-mono text-xs">{config.fs}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{config.protocol}</Badge>
-                        {config.readOnly && (
-                          <Badge variant="outline" className="ml-1">
-                            read-only
-                          </Badge>
-                        )}
                       </TableCell>
+                      <TableCell className="text-xs tabular-nums">{config.port}</TableCell>
                       <TableCell>
-                        <span className="flex items-center gap-1">
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary font-mono text-xs hover:underline"
-                          >
-                            {url}
-                          </a>
+                        <Switch
+                          checked={config.autoStart}
+                          onCheckedChange={(v) => void setAutoStart(config.id, v)}
+                          aria-label={`Auto-start ${config.fs}`}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {!runningIds.has(config.id) && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
-                                size="icon-xs"
-                                aria-label="Copy URL"
+                                size="icon-sm"
+                                aria-label={`Start ${config.fs}`}
                                 onClick={() => {
-                                  void navigator.clipboard.writeText(url);
-                                  toast.success("URL copied");
+                                  startServe(config)
+                                    .then(() => toast.success(`Serving ${config.fs}`))
+                                    .catch((err: Error) =>
+                                      toast.error(`Start failed: ${err.message}`),
+                                    );
                                 }}
                               >
-                                <Copy />
+                                <Play />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Copy URL</TooltipContent>
+                            <TooltipContent>Start</TooltipContent>
                           </Tooltip>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            void stopServe(jobid)
-                              .then(() => toast.success("Stopped"))
-                              .catch((err: Error) => toast.error(`Stop failed: ${err.message}`));
-                          }}
-                        >
-                          <Square /> Stop
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {saved.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Saved shares</CardTitle>
-            <CardDescription>Auto-start launches the share when RcloneGUI starts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>What</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead>Port</TableHead>
-                  <TableHead>Auto-start</TableHead>
-                  <TableHead className="w-28 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {saved.map((config) => (
-                  <TableRow key={config.id}>
-                    <TableCell className="font-mono text-xs">{config.fs}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{config.protocol}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs tabular-nums">{config.port}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={config.autoStart}
-                        onCheckedChange={(v) => void setAutoStart(config.id, v)}
-                        aria-label={`Auto-start ${config.fs}`}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {!runningIds.has(config.id) && (
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              aria-label={`Start ${config.fs}`}
-                              onClick={() => {
-                                startServe(config)
-                                  .then(() => toast.success(`Serving ${config.fs}`))
-                                  .catch((err: Error) =>
-                                    toast.error(`Start failed: ${err.message}`),
-                                  );
-                              }}
+                              aria-label={`Forget ${config.fs}`}
+                              onClick={() => void removeSaved(config.id)}
                             >
-                              <Play />
+                              <Trash2 className="text-destructive" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Start</TooltipContent>
+                          <TooltipContent>Forget</TooltipContent>
                         </Tooltip>
-                      )}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Forget ${config.fs}`}
-                            onClick={() => void removeSaved(config.id)}
-                          >
-                            <Trash2 className="text-destructive" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Forget</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-      {active.length === 0 && saved.length === 0 && (
-        <EmptyState
-          icon={Share2}
-          title="Nothing shared yet"
-          hint="Start a share above — hand the URL to any device on your network."
-        />
-      )}
+        {active.length === 0 && saved.length === 0 && (
+          <EmptyState
+            icon={Share2}
+            title="Nothing shared yet"
+            hint="Start a share above — hand the URL to any device on your network."
+          />
+        )}
+      </div>
+      {/* tables */}
     </div>
   );
 }

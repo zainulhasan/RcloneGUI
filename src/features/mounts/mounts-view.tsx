@@ -118,15 +118,13 @@ export function MountsView() {
     <div className="flex flex-col gap-4 p-6">
       <PageHeader
         title="Mounts"
-        description="Expose remotes as local drives with configurable VFS caching."
+        description="Mount any remote as a local drive · configurable VFS cache"
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Mount a remote</CardTitle>
-          <CardDescription>
-            Make a remote appear as a local drive. Needs FUSE (macFUSE / WinFsp / fuse3).
-          </CardDescription>
+          <CardTitle className="text-sm">New mount</CardTitle>
+          <CardDescription>Needs FUSE (macFUSE / WinFsp / fuse3).</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
@@ -267,148 +265,152 @@ export function MountsView() {
         </CardContent>
       </Card>
 
-      {active.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Active mounts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Remote</TableHead>
-                  <TableHead>Mount point</TableHead>
-                  <TableHead>Mounted</TableHead>
-                  <TableHead className="w-28 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {active.map((m) => (
-                  <TableRow key={m.MountPoint}>
-                    <TableCell className="font-medium">{m.Fs}</TableCell>
-                    <TableCell className="font-mono text-xs">{m.MountPoint}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {formatDateTime(m.MountedOn)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={unmount.isPending}
-                        onClick={() => unmount.mutate(m.MountPoint)}
-                      >
-                        <Unplug /> Unmount
-                      </Button>
-                    </TableCell>
+      {/* ── right: tables ── */}
+      <div className="flex flex-col gap-4">
+        {active.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Active mounts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Remote</TableHead>
+                    <TableHead>Mount point</TableHead>
+                    <TableHead>Mounted</TableHead>
+                    <TableHead className="w-28 text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {saved.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Saved mounts</CardTitle>
-            <CardDescription>
-              Auto-mount runs when RcloneGUI starts. Cache settings are remembered per mount.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Remote</TableHead>
-                  <TableHead>Mount point</TableHead>
-                  <TableHead>Cache</TableHead>
-                  <TableHead>Auto-mount</TableHead>
-                  <TableHead className="w-28 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {saved.map((m) => {
-                  const isActive = activePoints.has(m.mountPoint);
-                  return (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">
-                        <span className="flex items-center gap-2">
-                          {m.fs}
-                          {isActive && (
-                            <Badge variant="running">
-                              <span className="size-1.5 rounded-full bg-current" />
-                              mounted
-                            </Badge>
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{m.mountPoint}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{m.options.cacheMode}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={m.autoMount}
-                          onCheckedChange={(v) => void setAutoMount(m.id, v)}
-                          aria-label={`Auto-mount ${m.fs}`}
-                        />
+                </TableHeader>
+                <TableBody>
+                  {active.map((m) => (
+                    <TableRow key={m.MountPoint}>
+                      <TableCell className="font-medium">{m.Fs}</TableCell>
+                      <TableCell className="font-mono text-xs">{m.MountPoint}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {formatDateTime(m.MountedOn)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {!isActive && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={unmount.isPending}
+                          onClick={() => unmount.mutate(m.MountPoint)}
+                        >
+                          <Unplug /> Unmount
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {saved.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Saved mounts</CardTitle>
+              <CardDescription>
+                Auto-mount runs when RcloneGUI starts. Cache settings are remembered per mount.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Remote</TableHead>
+                    <TableHead>Mount point</TableHead>
+                    <TableHead>Cache</TableHead>
+                    <TableHead>Auto-mount</TableHead>
+                    <TableHead className="w-28 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {saved.map((m) => {
+                    const isActive = activePoints.has(m.mountPoint);
+                    return (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-2">
+                            {m.fs}
+                            {isActive && (
+                              <Badge variant="running">
+                                <span className="size-1.5 rounded-full bg-current" />
+                                mounted
+                              </Badge>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{m.mountPoint}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{m.options.cacheMode}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={m.autoMount}
+                            onCheckedChange={(v) => void setAutoMount(m.id, v)}
+                            aria-label={`Auto-mount ${m.fs}`}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!isActive && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Mount ${m.fs}`}
+                                  onClick={() => {
+                                    mountSaved(m)
+                                      .then(() => {
+                                        toast.success(`Mounted ${m.fs}`);
+                                        refresh();
+                                      })
+                                      .catch((err: Error) =>
+                                        toast.error(`Mount failed: ${err.message}`),
+                                      );
+                                  }}
+                                >
+                                  <Play />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Mount now</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                aria-label={`Mount ${m.fs}`}
-                                onClick={() => {
-                                  mountSaved(m)
-                                    .then(() => {
-                                      toast.success(`Mounted ${m.fs}`);
-                                      refresh();
-                                    })
-                                    .catch((err: Error) =>
-                                      toast.error(`Mount failed: ${err.message}`),
-                                    );
-                                }}
+                                aria-label={`Forget ${m.fs}`}
+                                onClick={() => void removeSaved(m.id)}
                               >
-                                <Play />
+                                <Trash2 className="text-destructive" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Mount now</TooltipContent>
+                            <TooltipContent>Forget</TooltipContent>
                           </Tooltip>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Forget ${m.fs}`}
-                              onClick={() => void removeSaved(m.id)}
-                            >
-                              <Trash2 className="text-destructive" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Forget</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-      {active.length === 0 && saved.length === 0 && (
-        <EmptyState
-          icon={HardDrive}
-          title="No mounts yet"
-          hint="Mounted remotes appear in Finder/Explorer like normal drives."
-        />
-      )}
+        {active.length === 0 && saved.length === 0 && (
+          <EmptyState
+            icon={HardDrive}
+            title="No mounts yet"
+            hint="Mounted remotes appear in Finder/Explorer like normal drives."
+          />
+        )}
+      </div>
+      {/* tables */}
     </div>
   );
 }

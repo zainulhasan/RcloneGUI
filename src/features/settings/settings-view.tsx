@@ -208,6 +208,8 @@ export function SettingsView() {
   }, []);
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
+  const [folderDraft, setFolderDraft] = useState(settings.watchFolder ?? "");
+  const folderDirty = folderDraft !== (settings.watchFolder ?? "");
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const rcloneInfo = useRcloneInfo();
@@ -320,21 +322,30 @@ export function SettingsView() {
         <Row label="Folder">
           <div className="flex gap-2">
             <Input
-              className="font-mono text-xs"
               placeholder="/Users/you/Movies/Watch"
-              value={settings.watchFolder ?? ""}
-              onChange={(e) => void update({ watchFolder: e.target.value.trim() || null })}
+              value={folderDraft}
+              onChange={(e) => setFolderDraft(e.target.value)}
             />
             <Button
               variant="outline"
               size="icon"
               aria-label="Choose watch folder"
               onClick={() => {
-                void pickDirectory().then((dir) => dir && void update({ watchFolder: dir }));
+                void pickDirectory().then((dir) => {
+                  if (dir) {
+                    void update({ watchFolder: dir });
+                    setFolderDraft(dir);
+                  }
+                });
               }}
             >
               <FolderOpen />
             </Button>
+            {folderDirty && (
+              <Button onClick={() => void update({ watchFolder: folderDraft.trim() || null })}>
+                Save
+              </Button>
+            )}
           </div>
         </Row>
         <Row label="Open after sync" hint="Open the file with the system default app when ready.">

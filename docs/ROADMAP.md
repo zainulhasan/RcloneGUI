@@ -5,13 +5,13 @@ Competitive notes vs [rclone-ui/rclone-ui](https://github.com/rclone-ui/rclone-u
 
 ## Where RcloneGUI is already ahead
 
-| Area           | RcloneGUI                                                             | rclone-ui                                                   |
-| -------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
-| File browsing  | Dual-pane browser with multi-select, context menus, breadcrumbs       | No full browser (file commander is a paid/unlockable extra) |
-| Media workflow | Watch & Auto-Clean, watched DB, TMDB poster library, disk-space guard | None                                                        |
-| Operations UX  | Per-operation dry-run + filters/flags editor, settings defaults       | Raw command oriented                                        |
-| Logs           | Daemon log + structured activity log with level filters               | Minimal                                                     |
-| Quality        | Typed RC client, ~110 tests, CI on every PR                           | Lighter test surface                                        |
+| Area           | RcloneGUI                                                              | rclone-ui                                                   |
+| -------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
+| File browsing  | Dual-pane browser with multi-select, context menus, breadcrumbs        | No full browser (file commander is a paid/unlockable extra) |
+| Media workflow | Watch & Auto-Clean, TMDB poster library, stream/download, resume retry | None                                                        |
+| Operations UX  | Per-operation dry-run + filters/flags editor, settings defaults        | Raw command oriented                                        |
+| Logs           | Daemon log + structured activity log with level filters                | Minimal                                                     |
+| Quality        | Typed RC client, ~130 tests, CI on every PR                            | Lighter test surface                                        |
 
 ## Shipped (v0.1 line)
 
@@ -54,9 +54,19 @@ The biggest functional gap vs rclone-ui: everything stops when the window closes
 10. ✅ **Serve manager** — start/stop `rclone serve` (http/webdav/dlna/smb) per remote, showing
     the LAN URL for media players.
 
+## v0.5 — Media library & design refresh — SHIPPED
+
+11. ✅ **Media library** — recursive cloud folder scan with TMDB poster art; stream via public
+    link, download with inline progress bar and auto-retry on bad connections (20 retries,
+    multi-thread streams), mark watched, auto-clean local copies. Library cached across page
+    navigation; Scan button for explicit refresh.
+12. ✅ **v2 design system** — signal-blue accent, layered surface hierarchy, Geist typeface,
+    full design-token coverage (no one-off pixel values).
+13. ✅ **Settings UX** — explicit Save button for watch folder path; watch folder picker auto-saves.
+
 ## Later
 
-11. **Bandwidth schedule** — time-of-day bwlimit rules (`core/bwlimit` schedule syntax).
-12. **Encrypted-config support** — `RCLONE_CONFIG_PASS` prompt flow; one-click config backup
+14. **Bandwidth schedule** — time-of-day bwlimit rules (`core/bwlimit` schedule syntax).
+15. **Encrypted-config support** — `RCLONE_CONFIG_PASS` prompt flow; one-click config backup
     to a remote.
-13. **Localization** and keyboard-shortcut palette (cmd-K navigation).
+16. **Localization** and keyboard-shortcut palette (cmd-K navigation).
