@@ -4,3 +4,7 @@ src-tauri/target
 src-tauri/gen
 coverage
 package-lock.json
+.claude
+.gitnexus
+AGENTS.md
+CLAUDE.md
