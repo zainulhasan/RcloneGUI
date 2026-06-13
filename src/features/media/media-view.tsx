@@ -85,6 +85,7 @@ function useLibrary(fs: string | null, path: string, scanKey: number) {
   return useQuery({
     queryKey: ["media", "library", fs, path, scanKey],
     enabled: fs !== null && scanKey > 0,
+    staleTime: Infinity,
     queryFn: async (): Promise<LibraryEntry[]> => {
       const listing = await rc.list(fs!, path, { recurse: true, filesOnly: true });
       const videos = listing.filter((i) => isVideoFile(i.Name));
@@ -599,7 +600,7 @@ export function MediaView() {
       </div>
 
       {/* ── content ── */}
-      {library.isFetching ? (
+      {library.isLoading ? (
         <div className="grid grid-cols-6 gap-4">
           {Array.from({ length: 12 }, (_, i) => (
             <Skeleton key={i} className="aspect-[2/3] w-full rounded-lg" />
