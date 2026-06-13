@@ -3,22 +3,44 @@
 A polished, cross-platform desktop GUI for [rclone](https://rclone.org) — built with Tauri 2,
 React and TypeScript. **Free and open source** — a no-cost alternative to paid cloud-storage
 apps like Mountain Duck, ExpanDrive and CloudMounter, aiming for the best feature set of any
-rclone front-end. Browse remotes side by side, run copy/sync/move/bisync with dry-run and
-filters, watch live transfer stats, mount remotes, schedule jobs, and use the **Watch &
-Auto-Clean** media workflow: sync a movie locally, watch it in your own player, and let the app
-clean up after you.
+rclone front-end.
 
 - **macOS** (Apple Silicon + Intel), **Windows**, **Linux**
 - All rclone interaction via its Remote Control (RC) HTTP API — never by parsing CLI output
 - Auto-updates from GitHub Releases
-- Docs: [DESIGN.md](DESIGN.md) (design system) · [MEDIA.md](MEDIA.md) (media workflow) ·
-  [RELEASING.md](RELEASING.md) (releases & updater)
+- Docs: [DESIGN.md](DESIGN.md) · [MEDIA.md](MEDIA.md) · [RELEASING.md](RELEASING.md) · [docs/ROADMAP.md](docs/ROADMAP.md)
+
+## Features
+
+**File browser** — dual-pane browser with multi-select, copy/move/sync/bisync/delete, dry-run
+preview, filters and flags editor, rename, double-click to open local files.
+
+**Transfers** — live speed/ETA dashboard, per-job progress bars, combined throughput sparklines,
+SQLite-backed history that survives restarts.
+
+**Mounts** — VFS cache controls, saved mounts, auto-mount on launch, one-click unmount.
+
+**Serve** — start/stop `rclone serve http|webdav|dlna` per remote with a LAN URL for media
+players and DLNA receivers.
+
+**Scheduler** — cron jobs with presets; runs while the window is closed (tray + launch-at-login).
+
+**Remote hosts** — connect to a remote `rclone rcd` (NAS, server) from Settings; switch between
+local and remote daemon from the top bar.
+
+**Media library** — scan a cloud folder recursively, show TMDB poster art, track watched status:
+
+- **Stream** — open the file's cloud public link directly in your system player/browser
+- **Download** — copy to a local Watch Folder with inline progress; retries on flaky connections
+- **Auto-clean** — delete local copies after N hours or when a size cap is hit; every deletion
+  is logged to the Activity log
 
 ## Requirements
 
-- [rclone](https://rclone.org/downloads/) on your `PATH` (or set its path in Settings).
+- [rclone](https://rclone.org/downloads/) on your `PATH` (or configure its path in Settings).
   The app detects it on launch and offers a download link if missing.
 - For mounts: FUSE (macFUSE on macOS, WinFsp on Windows, fuse3 on Linux).
+- For media poster art: a free [TMDB API key](https://www.themoviedb.org/settings/api).
 
 ## Development
 
@@ -78,10 +100,10 @@ Releases are normally cut by CI from a `v*` tag — see [RELEASING.md](RELEASING
 src/                    # React frontend
   components/           # design-system primitives (shadcn/ui) + layout
   features/             # remotes, browser, operations, transfers, mounts,
-                        # scheduler, logs, media, settings, updater, health
-  lib/rc-client/        # typed rclone RC API client
+                        # serve, scheduler, media, settings, logs, updater, health
+  lib/rc-client/        # typed rclone RC API client (transport-injected for tests)
   store/                # Zustand stores (settings, jobs, navigation, …)
-  theme/                # design tokens (light/dark)
+  theme/                # design tokens (CSS variables, light/dark)
 src-tauri/              # Rust backend: daemon manager, RC proxy, disk checks
 tests/                  # Playwright E2E smoke test
 ```
