@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 
 import { rc, tauriTransport, type RcListItem } from "@/lib/rc-client";
-import { diskFree } from "@/lib/tauri";
+import { diskFree, openWithPlayer } from "@/lib/tauri";
 import { formatBytes } from "@/lib/format";
 import { logActivity } from "@/store/activity";
 import { useJobsStore } from "@/store/jobs";
@@ -61,11 +61,9 @@ export async function startWatchSync(
 
   const resumeOpts = {
     config: {
-      Retries: 20,
+      Retries: 10,
       RetriesSleep: "5s",
-      LowLevelRetries: 20,
-      MultiThreadStreams: 4,
-      MultiThreadCutoff: "256M",
+      LowLevelRetries: 10,
     },
   };
 
@@ -114,11 +112,16 @@ export async function handleWatchSyncComplete(meta: WatchJobMeta): Promise<void>
   }
 }
 
-/** Open a local file or URL with the OS default application/browser. */
+/** Open a local file or URL, using the preferred player if configured. */
 export async function openLocal(path: string): Promise<void> {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl(path);
+    return;
+  }
+  const { preferredPlayer } = useSettingsStore.getState().settings;
+  if (preferredPlayer) {
+    await openWithPlayer(preferredPlayer, path);
   } else {
     const { openPath } = await import("@tauri-apps/plugin-opener");
     await openPath(path);

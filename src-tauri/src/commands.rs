@@ -167,6 +167,30 @@ pub fn free_port() -> Result<u16, String> {
     port::pick_free_port().map_err(|e| e.to_string())
 }
 
+/// Open a local file with a specific player executable.
+/// On macOS, bare names (e.g. "VLC") and .app bundles use `open -a`.
+/// Everywhere else the name/path is invoked directly with the file as the first argument.
+#[tauri::command]
+pub fn open_with_player(player: String, path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let is_app_bundle = player.ends_with(".app");
+        let is_bare_name = !player.contains('/') && !player.contains('\\');
+        if is_app_bundle || is_bare_name {
+            return std::process::Command::new("open")
+                .args(["-a", &player, &path])
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("could not launch {player}: {e}"));
+        }
+    }
+    std::process::Command::new(&player)
+        .arg(&path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("could not launch {player}: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
