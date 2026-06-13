@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpDown,
   BrushCleaning,
   Check,
   ChevronLeft,
@@ -14,8 +15,10 @@ import {
   MonitorPlay,
   Play,
   RefreshCw,
+  RotateCcw,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -231,6 +234,7 @@ function PosterCard({
     ),
   );
   const isDownloading = !!job && !job.finished;
+  const isFailed = !!job && job.finished && !job.success;
 
   const resolution = entry.item.Name.match(/\b(4K|2160p)\b/i)
     ? "4K"
@@ -267,6 +271,15 @@ function PosterCard({
       toast.success(`Deleted local copy of "${title}"`);
     } catch (err) {
       toast.error(`Delete failed: ${(err as Error).message}`);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!job) return;
+    try {
+      await rc.jobStop(job.jobid);
+    } catch {
+      // best-effort
     }
   };
 
@@ -334,6 +347,13 @@ function PosterCard({
         {isDownloading && job && (
           <div className="absolute inset-x-0 bottom-0 bg-black/60">
             <JobProgress group={job.group} />
+            <button
+              className="absolute top-1 right-1 size-5 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center transition-colors"
+              onClick={() => void handleCancel()}
+              aria-label="Cancel download"
+            >
+              <X className="size-3" />
+            </button>
           </div>
         )}
 
@@ -345,7 +365,7 @@ function PosterCard({
               hover ? "opacity-100" : "opacity-0",
             )}
           >
-            {/* Primary: Play local or Stream/Download pair */}
+            {/* Primary: Play local, Retry if failed, or Open/Download pair */}
             {localPath ? (
               <button
                 className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
@@ -354,20 +374,29 @@ function PosterCard({
               >
                 <Play className="size-5 ml-0.5" />
               </button>
+            ) : isFailed ? (
+              <button
+                className="h-8 px-3 rounded-full bg-destructive/90 text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform"
+                onClick={() => void startWatchSync(entry.item, { fs })}
+                aria-label={`Retry download of ${title}`}
+              >
+                <RotateCcw className="size-3" /> Retry
+              </button>
             ) : (
               <div className="flex gap-2">
                 <button
                   className="h-8 px-3 rounded-full bg-white/92 text-gray-900 text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform disabled:opacity-50"
                   onClick={() => void handleStream()}
                   disabled={streaming}
-                  aria-label={`Stream ${title}`}
+                  title="Opens a direct link in your default browser or player. Requires a public link from the remote (e.g. OneDrive share)."
+                  aria-label={`Open ${title} as stream`}
                 >
                   {streaming ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <MonitorPlay className="size-3" />
                   )}
-                  Stream
+                  Open
                 </button>
                 <button
                   className="size-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 transition-transform"
@@ -425,6 +454,10 @@ function PosterCard({
           <span className="ml-auto text-primary flex items-center gap-1">
             <Loader2 className="size-3 animate-spin" /> Downloading
           </span>
+        ) : isFailed ? (
+          <span className="ml-auto text-destructive flex items-center gap-1">
+            <RotateCcw className="size-3" /> Failed
+          </span>
         ) : localPath && !watched ? (
           <span className="ml-auto text-primary flex items-center gap-1">
             <HardDrive className="size-3" /> Ready to play
@@ -441,6 +474,27 @@ function PosterCard({
 
 // ── main view ─────────────────────────────────────────────────────────────────
 type FilterTab = "all" | "watched" | "unwatched";
+type SortMode = "title" | "year" | "unwatched";
+
+function sortEntries(
+  entries: LibraryEntry[],
+  mode: SortMode,
+  watchedSet: Set<string>,
+): LibraryEntry[] {
+  return [...entries].sort((a, b) => {
+    if (mode === "unwatched") {
+      const aw = watchedSet.has(a.item.Path) ? 1 : 0;
+      const bw = watchedSet.has(b.item.Path) ? 1 : 0;
+      if (aw !== bw) return aw - bw;
+    }
+    if (mode === "year") {
+      const ay = a.movie?.year ?? a.year ?? 0;
+      const by = b.movie?.year ?? b.year ?? 0;
+      return by - ay;
+    }
+    return (a.movie?.title ?? a.title).localeCompare(b.movie?.title ?? b.title);
+  });
+}
 
 export function MediaView() {
   const saved = loadSaved();
@@ -451,6 +505,7 @@ export function MediaView() {
   const [tab, setTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [cleaning, setCleaning] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("title");
 
   const remotes = useRemotes();
   const tmdbApiKey = useSettingsStore((s) => s.settings.tmdbApiKey);
@@ -473,17 +528,21 @@ export function MediaView() {
   const watchedCount = allEntries.filter((e) => watchedSet.has(e.item.Path)).length;
   const unwatchedCount = allEntries.length - watchedCount;
 
-  const filtered = allEntries.filter((e) => {
-    const isWatched = watchedSet.has(e.item.Path);
-    if (tab === "watched" && !isWatched) return false;
-    if (tab === "unwatched" && isWatched) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const title = (e.movie?.title ?? e.title).toLowerCase();
-      if (!title.includes(q)) return false;
-    }
-    return true;
-  });
+  const filtered = sortEntries(
+    allEntries.filter((e) => {
+      const isWatched = watchedSet.has(e.item.Path);
+      if (tab === "watched" && !isWatched) return false;
+      if (tab === "unwatched" && isWatched) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const title = (e.movie?.title ?? e.title).toLowerCase();
+        if (!title.includes(q)) return false;
+      }
+      return true;
+    }),
+    sortMode,
+    watchedSet,
+  );
 
   const subtitle = fs
     ? `${allEntries.length} films on ${fs}${path ? path : ""} · ${watchedCount} watched`
@@ -588,20 +647,33 @@ export function MediaView() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="relative w-[200px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search films…"
-            className="pl-8 h-8 text-[13px]"
-          />
+        <div className="flex items-center gap-2">
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="h-8 w-[150px] text-[13px]" aria-label="Sort by">
+              <ArrowUpDown className="size-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="title">Title</SelectItem>
+              <SelectItem value="year">Year (newest)</SelectItem>
+              <SelectItem value="unwatched">Unwatched first</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="relative w-[200px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search films…"
+              className="pl-8 h-8 text-[13px]"
+            />
+          </div>
         </div>
       </div>
 
       {/* ── content ── */}
       {library.isLoading ? (
-        <div className="grid grid-cols-6 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
           {Array.from({ length: 12 }, (_, i) => (
             <Skeleton key={i} className="aspect-[2/3] w-full rounded-lg" />
           ))}
@@ -609,7 +681,7 @@ export function MediaView() {
       ) : library.isError ? (
         <p className="text-destructive text-sm">{(library.error as Error).message}</p>
       ) : filtered.length > 0 ? (
-        <div className="grid grid-cols-6 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
           {filtered.map((entry) => (
             <PosterCard
               key={entry.item.Path}
