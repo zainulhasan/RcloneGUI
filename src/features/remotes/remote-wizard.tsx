@@ -30,7 +30,7 @@ import {
   visibleOptions,
 } from "./provider-options";
 import { PROVIDER_PRESETS, presetFor, type ProviderField } from "./provider-presets";
-import { useCreateRemote, useUpdateRemote } from "./use-remotes";
+import { useCreateRemote, useReconnectRemote, useUpdateRemote } from "./use-remotes";
 
 const NAME_RE = /^[\w.][\w.\s-]*$/;
 
@@ -174,7 +174,8 @@ export function RemoteWizard({ open, onOpenChange, editing, existingNames }: Rem
 
   const createRemote = useCreateRemote();
   const updateRemote = useUpdateRemote();
-  const busy = createRemote.isPending || updateRemote.isPending;
+  const reconnectRemote = useReconnectRemote();
+  const busy = createRemote.isPending || updateRemote.isPending || reconnectRemote.isPending;
 
   const preset = useMemo(() => (type ? presetFor(type) : undefined), [type]);
   const provider = useMemo(
@@ -402,11 +403,30 @@ export function RemoteWizard({ open, onOpenChange, editing, existingNames }: Rem
                 </>
               )}
 
-              {oauth && (
+              {oauth && !editing && (
                 <p className="text-muted-foreground text-xs">
-                  After you press {editing ? "Save" : "Create"}, your browser opens to authorize
-                  access. Keep this window open until that finishes.
+                  After you press Create, your browser opens to authorize access. Keep this window
+                  open until that finishes.
                 </p>
+              )}
+              {oauth && editing && (
+                <div className="bg-muted/50 flex flex-col gap-2 rounded-md p-3">
+                  <p className="text-muted-foreground text-xs">
+                    This remote uses OAuth. To refresh the access token, re-authorize below. Your
+                    browser will open to complete the flow.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() =>
+                      reconnectRemote.mutate(editing.name, { onSuccess: () => close(false) })
+                    }
+                  >
+                    {reconnectRemote.isPending && <Loader2 className="animate-spin" />}
+                    Re-authorize "{editing.name}"
+                  </Button>
+                </div>
               )}
             </div>
             <DialogFooter>

@@ -48,6 +48,14 @@ export function useUpdateRemote() {
   });
 }
 
+export function useReconnectRemote() {
+  return useMutation({
+    mutationFn: (name: string) => rc.reconnectRemote(name),
+    onSuccess: (_d, name) => toast.success(`"${name}" re-authorized`),
+    onError: (err) => toast.error(`Re-authorization failed: ${err.message}`),
+  });
+}
+
 export function useDeleteRemote() {
   const queryClient = useQueryClient();
   return useMutation({
