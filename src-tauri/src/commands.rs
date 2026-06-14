@@ -170,8 +170,12 @@ pub fn free_port() -> Result<u16, String> {
 /// Open a local file with a specific player executable.
 /// On macOS, bare names (e.g. "VLC") and .app bundles use `open -a`.
 /// Everywhere else the name/path is invoked directly with the file as the first argument.
+/// Pass an empty string to auto-detect VLC, falling back to the system default opener.
 #[tauri::command]
 pub fn open_with_player(player: String, path: String) -> Result<(), String> {
+    if player.is_empty() {
+        return open_auto(&path);
+    }
     #[cfg(target_os = "macos")]
     {
         let is_app_bundle = player.ends_with(".app");
@@ -189,6 +193,66 @@ pub fn open_with_player(player: String, path: String) -> Result<(), String> {
         .spawn()
         .map(|_| ())
         .map_err(|e| format!("could not launch {player}: {e}"))
+}
+
+/// Try VLC first, then fall back to the platform system opener.
+fn open_auto(path: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        if std::path::Path::new("/Applications/VLC.app").exists() {
+            return std::process::Command::new("open")
+                .args(["-a", "VLC", path])
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("could not launch VLC: {e}"));
+        }
+        return std::process::Command::new("open")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("could not open file: {e}"));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let vlc_paths = ["/usr/bin/vlc", "/usr/local/bin/vlc", "/snap/bin/vlc"];
+        for &vlc in &vlc_paths {
+            if std::path::Path::new(vlc).exists() {
+                return std::process::Command::new(vlc)
+                    .arg(path)
+                    .spawn()
+                    .map(|_| ())
+                    .map_err(|e| format!("could not launch vlc: {e}"));
+            }
+        }
+        return std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("could not open file: {e}"));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let vlc_paths = [
+            r"C:\Program Files\VideoLAN\VLC\vlc.exe",
+            r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe",
+        ];
+        for &vlc in &vlc_paths {
+            if std::path::Path::new(vlc).exists() {
+                return std::process::Command::new(vlc)
+                    .arg(path)
+                    .spawn()
+                    .map(|_| ())
+                    .map_err(|e| format!("could not launch VLC: {e}"));
+            }
+        }
+        return std::process::Command::new("cmd")
+            .args(["/C", "start", "", path])
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("could not open file: {e}"));
+    }
+    #[allow(unreachable_code)]
+    Err("unsupported platform".to_string())
 }
 
 #[cfg(test)]

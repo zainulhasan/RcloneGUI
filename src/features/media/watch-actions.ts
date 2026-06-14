@@ -11,6 +11,62 @@ import { isInsideWatchFolder } from "./cleanup";
 import type { WatchJobMeta } from "./types";
 import { getWatchedDb } from "./watched-db";
 
+// ── subtitle helpers ──────────────────────────────────────────────────────────
+const SUBTITLE_EXTS = new Set([".srt", ".sub", ".ass", ".ssa", ".vtt", ".idx", ".sup"]);
+
+function fileBaseName(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
+}
+
+function parentDirPath(filePath: string): string {
+  const slash = filePath.lastIndexOf("/");
+  return slash > 0 ? filePath.slice(0, slash) : "";
+}
+
+async function downloadSubtitles(
+  fs: string,
+  videoItem: RcListItem,
+  watchFolder: string,
+): Promise<number> {
+  const dir = parentDirPath(videoItem.Path);
+  const videoBase = fileBaseName(videoItem.Name).toLowerCase();
+
+  let siblings: RcListItem[];
+  try {
+    siblings = await rc.list(fs, dir);
+  } catch {
+    return 0;
+  }
+
+  const subs = siblings.filter((s) => {
+    if (s.IsDir) return false;
+    const dotIdx = s.Name.lastIndexOf(".");
+    if (dotIdx < 0) return false;
+    const ext = s.Name.slice(dotIdx).toLowerCase();
+    if (!SUBTITLE_EXTS.has(ext)) return false;
+    // Match exact base or language-coded variant (e.g. Movie.en.srt)
+    const subBase = fileBaseName(s.Name).toLowerCase();
+    return subBase === videoBase || subBase.startsWith(videoBase + ".");
+  });
+
+  for (const sub of subs) {
+    try {
+      const job = await rc.copyFile(fs, sub.Path, watchFolder, sub.Name, {
+        config: { Retries: 3, LowLevelRetries: 3 },
+      });
+      logActivity("info", "media", `Subtitle download started: ${sub.Name} (job ${job.jobid})`);
+    } catch (err) {
+      logActivity(
+        "warning",
+        "media",
+        `Subtitle download failed for ${sub.Name}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+  return subs.length;
+}
+
 /**
  * The Watch flow: copy a remote file/folder into the Watch Folder, then (on
  * completion) record it and open it with the OS default app.
@@ -76,6 +132,15 @@ export async function startWatchSync(
       .track({ jobid: job.jobid, label: `Watch: ${item.Name}`, kind: "watch", meta });
     logActivity("info", "media", `Watch sync started for "${item.Name}" (job ${job.jobid})`);
     toast.success(`Syncing "${item.Name}" to your Watch Folder`);
+
+    // For single files, also grab any matching subtitle files from the same folder
+    if (!item.IsDir) {
+      void downloadSubtitles(pane.fs, item, watchFolder).then((count) => {
+        if (count > 0) {
+          toast.info(`Downloading ${count} subtitle file${count > 1 ? "s" : ""} alongside`);
+        }
+      });
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     toast.error(`Could not start sync: ${msg}`);
@@ -112,7 +177,8 @@ export async function handleWatchSyncComplete(meta: WatchJobMeta): Promise<void>
   }
 }
 
-/** Open a local file or URL, using the preferred player if configured. */
+/** Open a local file or URL, using the preferred player if configured.
+ * Falls back to VLC auto-detection then the system default. */
 export async function openLocal(path: string): Promise<void> {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
@@ -120,12 +186,8 @@ export async function openLocal(path: string): Promise<void> {
     return;
   }
   const { preferredPlayer } = useSettingsStore.getState().settings;
-  if (preferredPlayer) {
-    await openWithPlayer(preferredPlayer, path);
-  } else {
-    const { openPath } = await import("@tauri-apps/plugin-opener");
-    await openPath(path);
-  }
+  // Empty string → Rust open_auto: tries VLC first, then system default
+  await openWithPlayer(preferredPlayer ?? "", path);
 }
 
 /**
