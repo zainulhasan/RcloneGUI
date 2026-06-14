@@ -14,12 +14,12 @@ Remote Control (RC) HTTP API — no CLI output parsing, no fragile shell wrapper
 
 ## Screenshots
 
-| Dashboard (dark) | File browser (dark) | Transfers |
-|---|---|---|
+| Dashboard (dark)                             | File browser (dark)                      | Transfers                                    |
+| -------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
 | ![Dashboard](screenshots/dark-dashboard.png) | ![Browser](screenshots/dark-browser.png) | ![Transfers](screenshots/dark-transfers.png) |
 
-| Remotes | Media library | Scheduler |
-|---|---|---|
+| Remotes                                   | Media library                         | Scheduler                                     |
+| ----------------------------------------- | ------------------------------------- | --------------------------------------------- |
 | ![Remotes](screenshots/light-remotes.png) | ![Media](screenshots/light-media.png) | ![Scheduler](screenshots/light-scheduler.png) |
 
 ---
@@ -27,38 +27,47 @@ Remote Control (RC) HTTP API — no CLI output parsing, no fragile shell wrapper
 ## Features
 
 ### File Browser
+
 Dual-pane commander with multi-select, drag-and-drop between panes, context-menu operations
 (copy / move / sync / bisync / delete), dry-run preview, per-operation filter and flags editor,
 rename, double-click to open local files, and native folder-picker upload from disk.
 
 ### Sync & Transfers
+
 Copy, sync, move and bidirectional bisync with full rclone flag support. Live speed and ETA
 dashboard, per-job progress bars, combined throughput sparkline, SQLite-backed transfer history
 that survives restarts.
 
 ### Cloud Mounts
+
 Mount any remote as a local drive. VFS cache controls (mode, size, age, read-only, volume name).
 Saved mounts that persist across sessions; auto-mount on app launch.
 
 ### Serve
+
 Start and stop `rclone serve http | webdav | dlna` per remote with a LAN URL ready for media
 players and DLNA receivers.
 
 ### Scheduler
+
 Cron jobs with one-click presets (hourly, daily, weekly). Jobs run in the background while the
 window is closed — the app lives in the system tray and can launch at login.
 
 ### Remote Hosts
+
 Connect to a remote `rclone rcd` daemon running on a NAS or server. Switch between local and
 remote daemon from the top bar without restarting.
 
 ### Media Library
+
 Scan a cloud folder recursively, show TMDB poster art, and track watched status:
+
 - **Stream** — open the file's cloud URL directly in your system player or browser
 - **Download** — copy to a local Watch Folder with inline progress and automatic resume on flaky connections
 - **Auto-clean** — delete local copies after N hours or when a configurable size cap is hit; every deletion is recorded in the Activity log
 
 ### Remotes Wizard
+
 Every rclone backend is supported. Popular ones (Google Drive, S3, Dropbox, OneDrive, …) have
 guided curated setup; the full catalog of 70+ providers is searchable and uses auto-generated
 forms from rclone's own provider metadata. OAuth remotes open the browser auth flow natively.
@@ -67,11 +76,11 @@ forms from rclone's own provider metadata. OAuth remotes open the browser auth f
 
 ## Requirements
 
-| Requirement | Notes |
-|---|---|
-| [rclone](https://rclone.org/downloads/) | Must be on your `PATH` or configured in Settings |
-| macFUSE (macOS) / WinFsp (Windows) / fuse3 (Linux) | Only for mount features |
-| [TMDB API key](https://www.themoviedb.org/settings/api) | Only for media library poster art — free |
+| Requirement                                             | Notes                                            |
+| ------------------------------------------------------- | ------------------------------------------------ |
+| [rclone](https://rclone.org/downloads/)                 | Must be on your `PATH` or configured in Settings |
+| macFUSE (macOS) / WinFsp (Windows) / fuse3 (Linux)      | Only for mount features                          |
+| [TMDB API key](https://www.themoviedb.org/settings/api) | Only for media library poster art — free         |
 
 The app detects rclone on launch and offers a download link if it is missing.
 
@@ -81,11 +90,11 @@ The app detects rclone on launch and offers a download link if it is missing.
 
 Pre-built installers are attached to every [GitHub Release](https://github.com/zainulhasan/RcloneGUI/releases):
 
-| Platform | Format |
-|---|---|
+| Platform                      | Format                  |
+| ----------------------------- | ----------------------- |
 | macOS (Apple Silicon + Intel) | `.dmg` universal binary |
-| Windows | `.msi` or NSIS `.exe` |
-| Linux | `.AppImage` or `.deb` |
+| Windows                       | `.msi` or NSIS `.exe`   |
+| Linux                         | `.AppImage` or `.deb`   |
 
 Auto-updates are delivered through the built-in updater (signed releases, Tauri updater plugin).
 
@@ -128,13 +137,13 @@ Run this before every commit and PR. CI mirrors it exactly.
 npm run check
 ```
 
-| Step | Command |
-|---|---|
-| TypeScript | `npm run check-types` — `tsc --noEmit`, strict mode |
-| Lint | `npm run lint` — ESLint |
-| Format | `npm run format-check` — Prettier |
-| Frontend tests | `npm run test` — Vitest + Testing Library |
-| Rust | `npm run check:rust` — `cargo fmt --check && cargo clippy -D warnings && cargo test` |
+| Step           | Command                                                                              |
+| -------------- | ------------------------------------------------------------------------------------ |
+| TypeScript     | `npm run check-types` — `tsc --noEmit`, strict mode                                  |
+| Lint           | `npm run lint` — ESLint                                                              |
+| Format         | `npm run format-check` — Prettier                                                    |
+| Frontend tests | `npm run test` — Vitest + Testing Library                                            |
+| Rust           | `npm run check:rust` — `cargo fmt --check && cargo clippy -D warnings && cargo test` |
 
 Other useful commands:
 
@@ -246,34 +255,34 @@ git push origin feat/my-feature
 - [ ] Tested in the native Tauri desktop app — not just in a browser
 - [ ] New behaviour has unit tests (Vitest) or Playwright smoke coverage where reasonable
 - [ ] Design tokens only — no raw color values, no one-off inline styles (see [DESIGN.md](DESIGN.md))
-- [ ] PR description explains *what* changed and *why*, not just *how*
+- [ ] PR description explains _what_ changed and _why_, not just _how_
 
 ### Code style
 
 Formatting is enforced automatically. Conventions to know:
 
-| Area | Rule |
-|---|---|
-| Formatting | Prettier (`npm run format`), enforced in CI |
-| Linting | ESLint — no `any`, no unused imports |
-| CSS / styles | Tailwind utilities referencing design tokens only; no `style={{color: …}}` |
-| Server state | TanStack Query — hooks live in `src/features/<area>/use-<thing>.ts` |
-| UI state | Zustand store in `src/store/` |
-| RC calls | Always through `src/lib/rc-client/client.ts`; never call `invoke("rc_call")` from a component |
-| Tests | Colocate unit tests next to source; mock `@tauri-apps/api/core` via `src/test/setup.ts` |
-| Comments | Only when the *why* is non-obvious; never restate what the code says |
+| Area         | Rule                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| Formatting   | Prettier (`npm run format`), enforced in CI                                                   |
+| Linting      | ESLint — no `any`, no unused imports                                                          |
+| CSS / styles | Tailwind utilities referencing design tokens only; no `style={{color: …}}`                    |
+| Server state | TanStack Query — hooks live in `src/features/<area>/use-<thing>.ts`                           |
+| UI state     | Zustand store in `src/store/`                                                                 |
+| RC calls     | Always through `src/lib/rc-client/client.ts`; never call `invoke("rc_call")` from a component |
+| Tests        | Colocate unit tests next to source; mock `@tauri-apps/api/core` via `src/test/setup.ts`       |
+| Comments     | Only when the _why_ is non-obvious; never restate what the code says                          |
 
 ### Where new code goes
 
-| What you're adding | Where it lives |
-|---|---|
-| New rclone RC method | `src/lib/rc-client/client.ts` + type in `types.ts` |
-| New React Query hook | `src/features/<area>/use-<thing>.ts` |
-| New page | `src/features/<area>/<area>-view.tsx` + entry in `src/store/navigation.ts` |
-| New design token | `src/theme/tokens.css` (both `:root` and `.dark`) |
-| New shadcn component | `src/components/ui/` — follow the existing pattern |
-| New Tauri command | `src-tauri/src/commands.rs` + register in `lib.rs` |
-| New Zustand store | `src/store/<name>.ts` |
+| What you're adding   | Where it lives                                                             |
+| -------------------- | -------------------------------------------------------------------------- |
+| New rclone RC method | `src/lib/rc-client/client.ts` + type in `types.ts`                         |
+| New React Query hook | `src/features/<area>/use-<thing>.ts`                                       |
+| New page             | `src/features/<area>/<area>-view.tsx` + entry in `src/store/navigation.ts` |
+| New design token     | `src/theme/tokens.css` (both `:root` and `.dark`)                          |
+| New shadcn component | `src/components/ui/` — follow the existing pattern                         |
+| New Tauri command    | `src-tauri/src/commands.rs` + register in `lib.rs`                         |
+| New Zustand store    | `src/store/<name>.ts`                                                      |
 
 ### Reporting bugs
 
@@ -295,12 +304,12 @@ Open an issue with the **enhancement** label. Describe the use case, not just th
 
 ## Docs
 
-| File | Contents |
-|---|---|
-| [DESIGN.md](DESIGN.md) | Color tokens, typography, spacing, component conventions |
-| [MEDIA.md](MEDIA.md) | Media library rules: watched state, auto-clean, download resume |
-| [RELEASING.md](RELEASING.md) | How to cut a release, updater signing, CI secrets |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Shipped milestones and planned work |
+| File                               | Contents                                                        |
+| ---------------------------------- | --------------------------------------------------------------- |
+| [DESIGN.md](DESIGN.md)             | Color tokens, typography, spacing, component conventions        |
+| [MEDIA.md](MEDIA.md)               | Media library rules: watched state, auto-clean, download resume |
+| [RELEASING.md](RELEASING.md)       | How to cut a release, updater signing, CI secrets               |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Shipped milestones and planned work                             |
 
 ---
 
