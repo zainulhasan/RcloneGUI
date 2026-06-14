@@ -12,7 +12,6 @@ import {
   FolderSearch,
   HardDrive,
   Loader2,
-  MonitorPlay,
   Play,
   RefreshCw,
   RotateCcw,
@@ -45,11 +44,9 @@ import { useJobsStore } from "@/store/jobs";
 import { cn } from "@/lib/utils";
 
 import { isVideoFile, parseFilename } from "./filename-parser";
-import { getStreamUrl } from "./stream-actions";
 import { searchMovie, type TmdbMovie } from "./tmdb";
 import { runCleanupNow } from "./use-cleanup-runner";
 import { useLocalCopies, useMarkWatched, useWatchedPaths } from "./use-media";
-import { VideoPlayer } from "./video-player";
 import { deleteLocalCopy, openLocal, startWatchSync } from "./watch-actions";
 import type { WatchJobMeta } from "./types";
 
@@ -84,12 +81,12 @@ interface LibraryEntry {
 }
 
 // ── data hooks ────────────────────────────────────────────────────────────────
-function useLibrary(fs: string | null, path: string, scanKey: number) {
+function useLibrary(fs: string | null, path: string) {
   const tmdbApiKey = useSettingsStore((s) => s.settings.tmdbApiKey);
   return useQuery({
-    queryKey: ["media", "library", fs, path, scanKey],
-    enabled: fs !== null && scanKey > 0,
-    staleTime: Infinity,
+    queryKey: ["media", "library", fs, path],
+    enabled: fs !== null,
+    staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<LibraryEntry[]> => {
       const listing = await rc.list(fs!, path, { recurse: true, filesOnly: true });
       const videos = listing.filter((i) => isVideoFile(i.Name));
@@ -220,8 +217,6 @@ function PosterCard({
   localPath: string | null;
 }) {
   const [hover, setHover] = useState(false);
-  const [streaming, setStreaming] = useState(false);
-  const [playerOpen, setPlayerOpen] = useState(false);
   const markWatched = useMarkWatched();
   const queryClient = useQueryClient();
 
@@ -245,29 +240,6 @@ function PosterCard({
       : entry.item.Name.match(/\b720p\b/i)
         ? "720p"
         : "HD";
-
-  const handleStream = async () => {
-    setStreaming(true);
-    try {
-      const url = await getStreamUrl(fs, entry.item);
-      if (url) {
-        await openLocal(url);
-        toast.success(`Opening "${title}"`, { description: "Streaming in your default player" });
-      } else {
-        toast.info(`"${title}" can't be streamed directly`, {
-          description: "Hit Download to save it locally, then play it in the built-in player.",
-          duration: 6000,
-        });
-      }
-    } catch {
-      toast.info(`"${title}" can't be streamed directly`, {
-        description: "Hit Download to save it locally, then play it in the built-in player.",
-        duration: 6000,
-      });
-    } finally {
-      setStreaming(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!localPath) return;
@@ -371,24 +343,16 @@ function PosterCard({
               hover ? "opacity-100" : "opacity-0",
             )}
           >
-            {/* Primary: Play local, Retry if failed, or Open/Download pair */}
+            {/* Primary action */}
             {localPath ? (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                  onClick={() => setPlayerOpen(true)}
-                  aria-label={`Play ${title}`}
-                >
-                  <Play className="size-5 ml-0.5" />
-                </button>
-                <button
-                  className="text-white/70 text-[10px] hover:text-white transition-colors flex items-center gap-1"
-                  onClick={() => void openLocal(localPath)}
-                  aria-label={`Open ${title} in external player`}
-                >
-                  Open in external player
-                </button>
-              </div>
+              <button
+                className="size-12 rounded-full bg-white/92 text-gray-900 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                onClick={() => void openLocal(localPath)}
+                aria-label={`Play ${title}`}
+                title="Play in VLC (or configured player)"
+              >
+                <Play className="size-5 ml-0.5" />
+              </button>
             ) : isFailed ? (
               <button
                 className="h-8 px-3 rounded-full bg-destructive/90 text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform"
@@ -398,29 +362,13 @@ function PosterCard({
                 <RotateCcw className="size-3" /> Retry
               </button>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  className="h-8 px-3 rounded-full bg-white/92 text-gray-900 text-[12px] font-semibold flex items-center gap-1.5 shadow-md hover:scale-105 transition-transform disabled:opacity-50"
-                  onClick={() => void handleStream()}
-                  disabled={streaming}
-                  title="Opens a direct link in your default browser or player. Requires a public link from the remote (e.g. OneDrive share)."
-                  aria-label={`Open ${title} as stream`}
-                >
-                  {streaming ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <MonitorPlay className="size-3" />
-                  )}
-                  Open
-                </button>
-                <button
-                  className="size-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                  onClick={() => void startWatchSync(entry.item, { fs })}
-                  aria-label={`Download ${title}`}
-                >
-                  <Download className="size-4" />
-                </button>
-              </div>
+              <button
+                className="size-12 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                onClick={() => void startWatchSync(entry.item, { fs })}
+                aria-label={`Download ${title}`}
+              >
+                <Download className="size-5" />
+              </button>
             )}
 
             {/* Secondary: mark watched + delete local */}
@@ -463,10 +411,6 @@ function PosterCard({
       </div>
 
       {/* ── below the poster ── */}
-      {playerOpen && localPath && (
-        <VideoPlayer localPath={localPath} title={title} onClose={() => setPlayerOpen(false)} />
-      )}
-
       <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground tabular-nums px-0.5">
         <span>{year ?? "—"}</span>
         {isDownloading ? (
@@ -474,13 +418,9 @@ function PosterCard({
             <Loader2 className="size-3 animate-spin" /> Downloading
           </span>
         ) : isFailed ? (
-          <button
-            className="ml-auto text-destructive flex items-center gap-1 hover:text-destructive/80 transition-colors"
-            onClick={() => void startWatchSync(entry.item, { fs })}
-            aria-label={`Retry download of ${title}`}
-          >
-            <RotateCcw className="size-3" /> Retry
-          </button>
+          <span className="ml-auto text-destructive flex items-center gap-1">
+            <X className="size-3" /> Failed
+          </span>
         ) : localPath && !watched ? (
           <span className="ml-auto text-primary flex items-center gap-1">
             <HardDrive className="size-3" /> Ready to play
@@ -523,8 +463,6 @@ export function MediaView() {
   const saved = loadSaved();
   const [fs, setFs] = useState<string | null>(saved.fs);
   const [path, setPath] = useState(saved.path);
-  // Start at 1 if we have a saved selection so the library query fires immediately on mount.
-  const [scanKey, setScanKey] = useState(() => (saved.fs !== null ? 1 : 0));
   const [tab, setTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [cleaning, setCleaning] = useState(false);
@@ -534,7 +472,7 @@ export function MediaView() {
   const tmdbApiKey = useSettingsStore((s) => s.settings.tmdbApiKey);
   const remoteNames = Object.keys(remotes.data ?? {}).sort();
 
-  const library = useLibrary(fs, path, scanKey);
+  const library = useLibrary(fs, path);
   const watchedPaths = useWatchedPaths(fs);
   const localCopies = useLocalCopies(fs);
 
@@ -587,7 +525,6 @@ export function MediaView() {
             value={fs ?? undefined}
             onValueChange={(v) => {
               setFs(v);
-              setScanKey(0);
             }}
           >
             <SelectTrigger className="w-[180px]" aria-label="Media remote">
@@ -616,7 +553,7 @@ export function MediaView() {
 
           {/* Scan */}
           <Button
-            onClick={() => setScanKey((k) => k + 1)}
+            onClick={() => void library.refetch()}
             disabled={fs === null || library.isFetching}
           >
             {library.isFetching ? (
@@ -627,10 +564,13 @@ export function MediaView() {
             Scan
           </Button>
 
-          {/* Cleanup */}
+          {/* Cleanup — icon only, infrequent action */}
           <Button
             variant="outline"
+            size="icon"
             disabled={cleaning}
+            title="Clean up local copies"
+            aria-label="Clean up"
             onClick={() => {
               setCleaning(true);
               void runCleanupNow()
@@ -640,8 +580,11 @@ export function MediaView() {
                 .finally(() => setCleaning(false));
             }}
           >
-            {cleaning ? <Check className="size-4" /> : <BrushCleaning className="size-4" />}
-            Clean up
+            {cleaning ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <BrushCleaning className="size-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -722,7 +665,7 @@ export function MediaView() {
             Try a different search or filter.
           </p>
         </div>
-      ) : scanKey > 0 ? (
+      ) : fs !== null ? (
         <p className="text-muted-foreground text-sm py-10 text-center">
           No video files found in this folder.
         </p>
