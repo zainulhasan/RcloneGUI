@@ -11,7 +11,8 @@ import { Pane, type PaneProps } from "./pane";
 export function BrowserView({
   renderItemActions,
   renderItemBadge,
-}: Pick<PaneProps, "renderItemActions" | "renderItemBadge">) {
+  onDropItems,
+}: Pick<PaneProps, "renderItemActions" | "renderItemBadge" | "onDropItems">) {
   const remotes = useRemotes();
   const names = Object.keys(remotes.data ?? {}).sort();
   const [rightVisible, setRightVisible] = useState(true);
@@ -45,6 +46,7 @@ export function BrowserView({
           remotes={names}
           renderItemActions={renderItemActions}
           renderItemBadge={renderItemBadge}
+          onDropItems={onDropItems}
         />
         {rightVisible && (
           <Pane
@@ -52,6 +54,7 @@ export function BrowserView({
             remotes={names}
             renderItemActions={renderItemActions}
             renderItemBadge={renderItemBadge}
+            onDropItems={onDropItems}
           />
         )}
       </div>
