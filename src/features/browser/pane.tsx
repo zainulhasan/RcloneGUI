@@ -3,6 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUp,
   ChevronRight,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
   Filter as FilterIcon,
   Folder,
   FolderOpen,
@@ -51,10 +54,20 @@ import { renamedPath, renameItem, validateRename } from "./rename";
 import { applyClick, EMPTY_SELECTION, pruneSelection, type SelectionState } from "./selection";
 import { LOCAL_FS, useListing } from "./use-listing";
 
-function sortListing(items: RcListItem[]): RcListItem[] {
+type SortCol = "name" | "date" | "size";
+
+function sortListing(
+  items: RcListItem[],
+  col: SortCol = "name",
+  dir: "asc" | "desc" = "asc",
+): RcListItem[] {
   return [...items].sort((a, b) => {
     if (a.IsDir !== b.IsDir) return a.IsDir ? -1 : 1;
-    return a.Name.localeCompare(b.Name, undefined, { numeric: true });
+    let cmp = 0;
+    if (col === "name") cmp = a.Name.localeCompare(b.Name, undefined, { numeric: true });
+    else if (col === "date") cmp = (a.ModTime ?? "").localeCompare(b.ModTime ?? "");
+    else if (col === "size") cmp = (a.IsDir ? 0 : a.Size) - (b.IsDir ? 0 : b.Size);
+    return dir === "asc" ? cmp : -cmp;
   });
 }
 
@@ -128,7 +141,14 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
   const queryClient = useQueryClient();
   const listing = useListing(pane.fs, pane.path);
-  const items = useMemo(() => sortListing(listing.data ?? []), [listing.data]);
+  const [sort, setSort] = useState<{ col: SortCol; dir: "asc" | "desc" }>({
+    col: "name",
+    dir: "asc",
+  });
+  const items = useMemo(
+    () => sortListing(listing.data ?? [], sort.col, sort.dir),
+    [listing.data, sort],
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const visibleItems = useMemo(
@@ -136,7 +156,6 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
     [items, filterOpen, filterQuery],
   );
   const visibleKeys = useMemo(() => visibleItems.map((i) => i.Path), [visibleItems]);
-
   const [rawSelection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [mkdirOpen, setMkdirOpen] = useState(false);
   const [mkdirName, setMkdirName] = useState("");
@@ -388,9 +407,53 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
             <ContextMenuTrigger asChild>
               <div>
                 <div className="text-muted-foreground bg-surface sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1 text-[11px] font-semibold tracking-[0.06em] uppercase">
-                  <span className="min-w-0 flex-1">Name</span>
-                  <span className="w-24 shrink-0 text-right">Modified</span>
-                  <span className="w-16 shrink-0 text-right">Size</span>
+                  {(
+                    [
+                      {
+                        col: "name" as SortCol,
+                        label: "Name",
+                        className: "min-w-0 flex-1 text-left",
+                      },
+                      {
+                        col: "date" as SortCol,
+                        label: "Modified",
+                        className: "w-24 shrink-0 text-right justify-end",
+                      },
+                      {
+                        col: "size" as SortCol,
+                        label: "Size",
+                        className: "w-16 shrink-0 text-right justify-end",
+                      },
+                    ] as const
+                  ).map(({ col, label, className }) => {
+                    const active = sort.col === col;
+                    const SortIcon = active
+                      ? sort.dir === "asc"
+                        ? ChevronUp
+                        : ChevronDown
+                      : ChevronsUpDown;
+                    return (
+                      <button
+                        key={col}
+                        className={cn(
+                          "hover:text-foreground flex items-center gap-0.5 transition-colors",
+                          className,
+                          active && "text-foreground",
+                        )}
+                        onClick={() =>
+                          setSort((s) =>
+                            s.col === col
+                              ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
+                              : { col, dir: "asc" },
+                          )
+                        }
+                      >
+                        {col !== "name" && <SortIcon className="size-3" />}
+                        {label}
+                        {col === "name" && <SortIcon className="size-3" />}
+                      </button>
+                    );
+                  })}
                 </div>
                 <ul className="p-1" role="listbox" aria-multiselectable>
                   {visibleItems.map((item, i) => {

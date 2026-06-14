@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { ScrollText } from "lucide-react";
+import { ClipboardCopy, Search, ScrollText } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useActivityStore, type ActivityLevel } from "@/store/activity";
@@ -19,17 +22,41 @@ import { EmptyState, PageHeader } from "@/components/layout/page";
 
 import { DAEMON_LEVEL_RANK, daemonLineLevel, type DaemonLevel } from "./log-level";
 
+function CopyButton({ lines }: { lines: string[] }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={lines.length === 0}
+          onClick={() => {
+            void navigator.clipboard.writeText(lines.join("\n")).then(() => {
+              toast.success(`Copied ${lines.length} lines`);
+            });
+          }}
+        >
+          <ClipboardCopy className="size-3.5" />
+          Copy
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Copy visible lines to clipboard</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function DaemonLogs() {
   const [minLevel, setMinLevel] = useState<DaemonLevel>("INFO");
+  const [search, setSearch] = useState("");
   const logs = useQuery({
     queryKey: ["daemon-logs"],
     queryFn: () => invoke<string[]>("daemon_logs"),
     refetchInterval: 2000,
   });
 
-  const lines = (logs.data ?? []).filter(
-    (line) => DAEMON_LEVEL_RANK[daemonLineLevel(line)] >= DAEMON_LEVEL_RANK[minLevel],
-  );
+  const lines = (logs.data ?? [])
+    .filter((line) => DAEMON_LEVEL_RANK[daemonLineLevel(line)] >= DAEMON_LEVEL_RANK[minLevel])
+    .filter((line) => !search || line.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -45,7 +72,17 @@ function DaemonLogs() {
             <SelectItem value="ERROR">Errors</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-xs">{lines.length} lines</span>
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 size-3.5 -translate-y-1/2" />
+          <Input
+            className="h-8 pl-7 text-xs"
+            placeholder="Search logs…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="text-muted-foreground shrink-0 text-xs">{lines.length} lines</span>
+        <CopyButton lines={lines} />
       </div>
       {lines.length === 0 ? (
         <EmptyLogs label="No daemon log lines at this level." />
@@ -68,11 +105,23 @@ function ActivityLogs() {
   const entries = useActivityStore((s) => s.entries);
   const clear = useActivityStore((s) => s.clear);
   const [minLevel, setMinLevel] = useState<ActivityLevel>("info");
+  const [search, setSearch] = useState("");
 
   const visible = entries
     .filter((e) => ACTIVITY_LEVEL_RANK[e.level] >= ACTIVITY_LEVEL_RANK[minLevel])
+    .filter(
+      (e) =>
+        !search ||
+        e.message.toLowerCase().includes(search.toLowerCase()) ||
+        e.category.toLowerCase().includes(search.toLowerCase()),
+    )
     .slice()
     .reverse();
+
+  const copyLines = visible.map(
+    (e) =>
+      `${formatDateTime(new Date(e.at).toISOString())} [${e.level}] ${e.category}: ${e.message}`,
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -87,9 +136,19 @@ function ActivityLogs() {
             <SelectItem value="error">Errors</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-xs">{visible.length} entries</span>
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 size-3.5 -translate-y-1/2" />
+          <Input
+            className="h-8 pl-7 text-xs"
+            placeholder="Search logs…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="text-muted-foreground shrink-0 text-xs">{visible.length} entries</span>
+        <CopyButton lines={copyLines} />
         {entries.length > 0 && (
-          <Button variant="outline" size="sm" className="ml-auto" onClick={clear}>
+          <Button variant="outline" size="sm" onClick={clear}>
             Clear
           </Button>
         )}
