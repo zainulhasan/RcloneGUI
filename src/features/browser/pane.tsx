@@ -14,6 +14,7 @@ import {
   Home,
   Loader2,
   RefreshCw,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -180,6 +181,8 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
   const [renaming, setRenaming] = useState<RcListItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [deleteTargets, setDeleteTargets] = useState<RcListItem[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const renameError = renaming
     ? validateRename(
@@ -218,6 +221,32 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
       void refresh();
     } catch (err) {
       toast.error(`Could not create folder: ${(err as Error).message}`);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!paneFs || !deleteTargets) return;
+    setDeleting(true);
+    try {
+      for (const item of deleteTargets) {
+        if (item.IsDir) {
+          await rc.purge(paneFs, item.Path);
+        } else {
+          await rc.deleteFile(paneFs, item.Path);
+        }
+      }
+      toast.success(
+        deleteTargets.length === 1
+          ? `Deleted "${deleteTargets[0].Name}"`
+          : `Deleted ${deleteTargets.length} items`,
+      );
+      setSelection(EMPTY_SELECTION);
+      setDeleteTargets(null);
+      void refresh();
+    } catch (err) {
+      toast.error(`Delete failed: ${(err as Error).message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -551,6 +580,14 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                     Copy path
                   </ContextMenuItem>
                   <ContextMenuSeparator />
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteTargets(selectedItems)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete…
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
                 </>
               )}
               <ContextMenuItem onClick={() => setMkdirOpen(true)}>New folder…</ContextMenuItem>
@@ -628,6 +665,33 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
               disabled={!!renameError || renameValue.trim() === renaming?.Name}
             >
               Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteTargets !== null} onOpenChange={(o) => !o && setDeleteTargets(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Delete{" "}
+              {deleteTargets?.length === 1
+                ? `"${deleteTargets[0].Name}"`
+                : `${deleteTargets?.length ?? 0} items`}
+              ?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            {deleteTargets?.some((i) => i.IsDir)
+              ? "Directories and all their contents will be permanently removed."
+              : "This cannot be undone."}
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteTargets(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => void confirmDelete()}>
+              {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

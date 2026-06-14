@@ -126,9 +126,18 @@ function JobCard({ job }: { job: TrackedJob }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {job.finished ? (
-          <p className="text-muted-foreground text-xs">
-            {job.success ? "Completed" : (job.error ?? "Failed")}
-          </p>
+          <>
+            <p
+              className={cn("text-xs", job.success ? "text-muted-foreground" : "text-destructive")}
+            >
+              {job.success ? "Completed" : (job.error ?? "Failed")}
+            </p>
+            {job.success && job.kind === "watch" && job.meta && (
+              <p className="text-muted-foreground font-mono text-xs truncate">
+                → {(job.meta as WatchJobMeta).localPath}
+              </p>
+            )}
+          </>
         ) : (
           <>
             <div className="flex items-center gap-3">

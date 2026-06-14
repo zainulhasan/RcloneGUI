@@ -43,7 +43,7 @@ import { FlagsEditor } from "@/features/operations/flags-editor";
 import { formatDateTime } from "@/lib/format";
 import { useScheduledJobsStore, newScheduledJob, type ScheduledJob } from "@/store/scheduled-jobs";
 
-import { validateCron } from "./cron";
+import { cronToHuman, validateCron } from "./cron";
 import { presetToScheduledJob } from "./preset-utils";
 import { executeScheduledJob } from "./use-scheduler-runner";
 
@@ -62,6 +62,7 @@ function JobDialog({
   );
 
   const cronError = validateCron(draft.cron);
+  const cronHuman = cronError === null ? cronToHuman(draft.cron) : null;
   const valid = draft.name.trim() && draft.srcFs.trim() && draft.dstFs.trim() && cronError === null;
 
   const save = () => {
@@ -162,9 +163,15 @@ function JobDialog({
                 </SelectContent>
               </Select>
             </div>
-            <p className={cronError ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
-              {cronError ?? 'minute hour day month weekday — e.g. "0 3 * * *" is daily at 03:00.'}
-            </p>
+            {cronError ? (
+              <p className="text-destructive text-xs">{cronError}</p>
+            ) : cronHuman ? (
+              <p className="text-primary text-xs font-medium">{cronHuman}</p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                {'minute hour day month weekday — e.g. "0 3 * * *" is daily at 03:00.'}
+              </p>
+            )}
           </div>
 
           <FlagsEditor value={draft.flags} onChange={(flags) => setDraft({ ...draft, flags })} />
