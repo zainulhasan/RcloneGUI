@@ -1,67 +1,67 @@
 /*
- * RcloneGUI design tokens — "a precision instrument for your files".
- * Signal-blue accent, cool blue-slate neutrals, layered tinted surfaces
- * (bg < sidebar < card < popover in dark). From the v2 design system.
+ * RcloneGUI design tokens — Material Design 3 edition.
+ * Blue tonal palette, surface-container elevation model, Roboto Flex.
+ * MD3 shape scale: XS=4 / S=8 / M=12 / L=16 / XL=28 / Full=pill.
  * Semantic tokens only — components never reference raw color values.
  */
 
 :root {
-  --radius: 0.5rem; /* 8px base — technical, not toy */
+  --radius: 0.75rem; /* 12px = MD3 Medium shape */
 
-  /* surfaces */
-  --background: oklch(0.985 0.0035 255);
-  --foreground: oklch(0.255 0.022 257);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.255 0.022 257);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.255 0.022 257);
+  /* surfaces — N (neutral-blue) tonal series */
+  --background: oklch(0.99 0.003 262); /* N-99 */
+  --foreground: oklch(0.218 0.016 258); /* N-10 */
+  --card: oklch(0.944 0.007 257); /* SurfaceContainer N-94 */
+  --card-foreground: oklch(0.218 0.016 258);
+  --popover: oklch(1 0 0); /* SurfaceContainerLowest */
+  --popover-foreground: oklch(0.218 0.016 258);
 
-  /* brand + neutrals */
-  --primary: oklch(0.555 0.205 258); /* signal blue */
-  --primary-foreground: oklch(0.99 0.01 255);
-  --secondary: oklch(0.955 0.006 256);
-  --secondary-foreground: oklch(0.3 0.02 257);
-  --muted: oklch(0.955 0.006 256);
-  --muted-foreground: oklch(0.52 0.018 257);
-  --accent: oklch(0.945 0.012 256);
-  --accent-foreground: oklch(0.28 0.022 257);
+  /* brand — P-40 primary, OnPrimary white */
+  --primary: oklch(0.558 0.205 257);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.923 0.009 257); /* SurfaceContainerHigh N-92 */
+  --secondary-foreground: oklch(0.218 0.016 258);
+  --muted: oklch(0.923 0.009 257);
+  --muted-foreground: oklch(0.434 0.021 258); /* OnSurfaceVariant NV-30 */
+  --accent: oklch(0.904 0.011 257); /* SurfaceContainerHighest N-90 */
+  --accent-foreground: oklch(0.218 0.016 258);
 
   /* semantic */
-  --destructive: oklch(0.585 0.215 24);
-  --destructive-foreground: oklch(0.99 0.01 25);
-  --success: oklch(0.6 0.145 156);
-  --success-foreground: oklch(0.99 0.01 156);
+  --destructive: oklch(0.578 0.215 24); /* E-40 */
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.59 0.145 156);
+  --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.155 70);
   --warning-foreground: oklch(0.27 0.05 70);
 
   /* lines + controls */
-  --border: oklch(0.905 0.008 256);
-  --input: oklch(0.9 0.008 256);
-  --ring: oklch(0.555 0.205 258);
+  --border: oklch(0.858 0.01 258); /* OutlineVariant NV-80 */
+  --input: oklch(0.858 0.01 258);
+  --ring: oklch(0.558 0.205 257);
 
   /* data viz */
-  --chart-1: oklch(0.555 0.205 258);
+  --chart-1: oklch(0.558 0.205 257);
   --chart-2: oklch(0.66 0.15 192);
   --chart-3: oklch(0.62 0.17 300);
-  --chart-4: oklch(0.7 0.155 70);
+  --chart-4: oklch(0.72 0.155 70);
   --chart-5: oklch(0.62 0.16 156);
 
-  /* sidebar */
-  --sidebar: oklch(0.965 0.005 256);
-  --sidebar-foreground: oklch(0.42 0.018 257);
-  --sidebar-primary: oklch(0.555 0.205 258);
-  --sidebar-primary-foreground: oklch(0.99 0.01 255);
-  --sidebar-accent: oklch(0.93 0.012 256);
-  --sidebar-accent-foreground: oklch(0.25 0.02 257);
-  --sidebar-border: oklch(0.9 0.008 256);
-  --sidebar-ring: oklch(0.555 0.205 258);
+  /* sidebar — SurfaceContainerLow N-96 */
+  --sidebar: oklch(0.963 0.005 256);
+  --sidebar-foreground: oklch(0.434 0.021 258);
+  --sidebar-primary: oklch(0.558 0.205 257);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.923 0.009 257);
+  --sidebar-accent-foreground: oklch(0.218 0.016 258);
+  --sidebar-border: oklch(0.858 0.01 258);
+  --sidebar-ring: oklch(0.558 0.205 257);
 
-  /* extensions beyond stock shadcn (used by RcloneGUI recipes) */
-  --surface: oklch(0.972 0.004 255); /* subtle raised fill */
-  --primary-hover: oklch(0.51 0.21 258);
-  --border-strong: oklch(0.855 0.01 256);
+  /* extensions */
+  --surface: oklch(0.963 0.005 256); /* SurfaceContainerLow N-96 */
+  --primary-hover: oklch(0.44 0.195 257); /* P-30 — MD3 hover = darker state layer */
+  --border-strong: oklch(0.62 0.016 258); /* Outline NV-50 */
 
-  /* shadow scale — cool-tinted, restrained */
+  /* shadow scale — warm-neutral, restrained */
   --shadow-xs: 0 1px 2px 0 oklch(0.25 0.03 257 / 0.05);
   --shadow-sm: 0 1px 2px 0 oklch(0.25 0.03 257 / 0.06), 0 1px 1px -1px oklch(0.25 0.03 257 / 0.08);
   --shadow: 0 2px 4px -1px oklch(0.25 0.03 257 / 0.07), 0 1px 2px -1px oklch(0.25 0.03 257 / 0.06);
@@ -72,60 +72,60 @@
 }
 
 .dark {
-  /* surfaces — layered: bg < sidebar < card < popover */
-  --background: oklch(0.175 0.0125 260);
-  --foreground: oklch(0.955 0.004 255);
-  --card: oklch(0.214 0.0145 260);
-  --card-foreground: oklch(0.955 0.004 255);
-  --popover: oklch(0.234 0.015 260);
-  --popover-foreground: oklch(0.965 0.004 255);
+  /* surfaces — N tonal series, blue-tinted dark */
+  --background: oklch(0.143 0.014 262); /* N-6 */
+  --foreground: oklch(0.9 0.012 258); /* N-90 */
+  --card: oklch(0.218 0.02 260); /* SurfaceContainer N-12 */
+  --card-foreground: oklch(0.9 0.012 258);
+  --popover: oklch(0.265 0.022 260); /* SurfaceContainerHigh N-17 */
+  --popover-foreground: oklch(0.9 0.012 258);
 
-  /* brand + neutrals */
-  --primary: oklch(0.645 0.185 257); /* lifted for dark */
-  --primary-foreground: oklch(0.16 0.03 258);
-  --secondary: oklch(0.262 0.016 260);
-  --secondary-foreground: oklch(0.93 0.006 255);
-  --muted: oklch(0.262 0.015 260);
-  --muted-foreground: oklch(0.68 0.018 258);
-  --accent: oklch(0.285 0.022 259);
-  --accent-foreground: oklch(0.96 0.005 255);
+  /* brand — P-80 primary for dark, OnPrimary P-20 */
+  --primary: oklch(0.795 0.115 257);
+  --primary-foreground: oklch(0.23 0.135 258);
+  --secondary: oklch(0.265 0.022 260); /* SurfaceContainerHigh */
+  --secondary-foreground: oklch(0.9 0.012 258);
+  --muted: oklch(0.218 0.02 260); /* SurfaceContainer */
+  --muted-foreground: oklch(0.799 0.021 260); /* OnSurfaceVariant NV-80 */
+  --accent: oklch(0.265 0.022 260); /* SurfaceContainerHigh */
+  --accent-foreground: oklch(0.9 0.012 258);
 
   /* semantic */
-  --destructive: oklch(0.635 0.205 23);
-  --destructive-foreground: oklch(0.985 0.01 25);
-  --success: oklch(0.715 0.155 158);
-  --success-foreground: oklch(0.16 0.04 158);
+  --destructive: oklch(0.733 0.181 24); /* E-80 */
+  --destructive-foreground: oklch(0.23 0.13 24);
+  --success: oklch(0.71 0.155 158);
+  --success-foreground: oklch(0.18 0.06 158);
   --warning: oklch(0.79 0.15 73);
   --warning-foreground: oklch(0.2 0.05 73);
 
   /* lines + controls */
-  --border: oklch(0.285 0.014 260);
-  --input: oklch(0.315 0.015 260);
-  --ring: oklch(0.645 0.185 257);
+  --border: oklch(0.348 0.022 260); /* OutlineVariant NV-30 */
+  --input: oklch(0.386 0.022 260);
+  --ring: oklch(0.795 0.115 257);
 
   /* data viz */
-  --chart-1: oklch(0.66 0.18 257);
+  --chart-1: oklch(0.795 0.115 257);
   --chart-2: oklch(0.72 0.14 192);
   --chart-3: oklch(0.69 0.16 300);
   --chart-4: oklch(0.79 0.15 73);
   --chart-5: oklch(0.72 0.15 158);
 
-  /* sidebar */
-  --sidebar: oklch(0.193 0.013 260);
-  --sidebar-foreground: oklch(0.72 0.016 258);
-  --sidebar-primary: oklch(0.645 0.185 257);
-  --sidebar-primary-foreground: oklch(0.16 0.03 258);
-  --sidebar-accent: oklch(0.265 0.018 259);
-  --sidebar-accent-foreground: oklch(0.96 0.005 255);
-  --sidebar-border: oklch(0.262 0.014 260);
-  --sidebar-ring: oklch(0.645 0.185 257);
+  /* sidebar — SurfaceContainerLow N-10 */
+  --sidebar: oklch(0.197 0.018 260);
+  --sidebar-foreground: oklch(0.799 0.021 260);
+  --sidebar-primary: oklch(0.795 0.115 257);
+  --sidebar-primary-foreground: oklch(0.23 0.135 258);
+  --sidebar-accent: oklch(0.265 0.022 260);
+  --sidebar-accent-foreground: oklch(0.9 0.012 258);
+  --sidebar-border: oklch(0.348 0.022 260);
+  --sidebar-ring: oklch(0.795 0.115 257);
 
   /* extensions */
-  --surface: oklch(0.205 0.014 260);
-  --primary-hover: oklch(0.695 0.175 257);
-  --border-strong: oklch(0.345 0.016 260);
+  --surface: oklch(0.197 0.018 260); /* SurfaceContainerLow N-10 */
+  --primary-hover: oklch(0.844 0.095 257); /* P-90 */
+  --border-strong: oklch(0.611 0.019 260); /* Outline NV-60 */
 
-  /* shadow scale — deeper, near-black on dark */
+  /* shadow scale — near-black on dark */
   --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.36), 0 1px 1px -1px oklch(0 0 0 / 0.4);
   --shadow: 0 2px 5px -1px oklch(0 0 0 / 0.4), 0 1px 2px -1px oklch(0 0 0 / 0.36);
