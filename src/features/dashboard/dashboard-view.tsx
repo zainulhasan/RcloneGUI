@@ -146,7 +146,6 @@ export function DashboardView() {
   const entries = useActivityStore((s) => s.entries);
   const watchFolder = useSettingsStore((s) => s.settings.watchFolder);
 
-  // Polling core stats here ensures the sparkline is populated while on this screen.
   const stats = useCoreStats();
   const speedSamples = useSpeedSamples();
 
@@ -159,14 +158,14 @@ export function DashboardView() {
 
   const remoteCount = Object.keys(remotes.data ?? {}).length;
   const activeJobs = jobs.filter((j) => !j.finished).length;
-  const recentActivity = entries.slice(-8).reverse();
+  const recentActivity = [...entries].reverse();
   const daemonUp = daemon.data?.running ?? false;
   const currentSpeed = stats.data?.speed ?? 0;
 
-  const remoteList = useMemo(() => Object.keys(remotes.data ?? {}).slice(0, 6), [remotes.data]);
+  const remoteList = useMemo(() => Object.keys(remotes.data ?? {}), [remotes.data]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-6">
+    <div className="flex h-full w-full flex-col gap-4 p-6">
       <PageHeader
         title="Dashboard"
         description="Health, activity and quick actions at a glance."
@@ -228,12 +227,12 @@ export function DashboardView() {
         />
       </div>
 
-      {/* ── two-column main grid ── */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
-        {/* Left: throughput sparkline + activity feed */}
-        <div className="flex flex-col gap-4">
+      {/* ── two-column main grid — fills the remaining vertical space ── */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[1fr_300px]">
+        {/* Left: throughput sparkline + activity feed (feed expands to fill) */}
+        <div className="flex min-h-0 flex-col gap-4">
           {/* Throughput strip */}
-          <Card className="gap-0 overflow-hidden py-0">
+          <Card className="shrink-0 gap-0 overflow-hidden py-0">
             <div className="flex items-stretch">
               <div className="flex shrink-0 flex-col justify-center gap-1 p-4 pr-5">
                 <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-[0.06em] uppercase">
@@ -264,15 +263,15 @@ export function DashboardView() {
             </div>
           </Card>
 
-          {/* Activity feed */}
-          <Card>
-            <CardHeader>
+          {/* Activity feed — fills remaining height */}
+          <Card className="flex min-h-0 flex-1 flex-col">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Activity className="text-muted-foreground size-4" />
                 Recent activity
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-0 flex-1 overflow-y-auto">
               {recentActivity.length === 0 ? (
                 <p className="text-muted-foreground py-6 text-center text-sm">
                   Nothing yet — operations, cleanups and scheduler runs will appear here.
@@ -312,10 +311,10 @@ export function DashboardView() {
           </Card>
         </div>
 
-        {/* Right: quick actions + remotes list */}
-        <div className="flex flex-col gap-4">
+        {/* Right: quick actions + remotes list (remotes expands to fill) */}
+        <div className="flex min-h-0 flex-col gap-4">
           {/* Quick actions */}
-          <Card>
+          <Card className="shrink-0">
             <CardHeader>
               <CardTitle className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Quick actions
@@ -339,9 +338,9 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          {/* Remotes list */}
-          <Card>
-            <CardHeader>
+          {/* Remotes list — fills remaining height, scrollable */}
+          <Card className="flex min-h-0 flex-1 flex-col">
+            <CardHeader className="shrink-0">
               <CardTitle className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <span>Remotes</span>
                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground tabular-nums">
@@ -349,25 +348,26 @@ export function DashboardView() {
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-0 flex-1 overflow-y-auto">
               {remoteList.length === 0 ? (
-                <p className="text-muted-foreground py-4 text-center text-xs">
-                  No remotes yet.{" "}
+                <div className="flex h-full flex-col items-center justify-center gap-2 py-4">
+                  <p className="text-muted-foreground text-center text-xs">No remotes yet.</p>
                   <button
-                    className="text-primary hover:underline"
+                    className="text-primary text-xs hover:underline"
                     onClick={() => navigate("remotes")}
                   >
-                    Add one
+                    Add one →
                   </button>
-                </p>
+                </div>
               ) : (
                 <div className="-mx-1 flex flex-col gap-0.5">
                   {remoteList.map((name) => {
                     const type = remotes.data?.[name]?.type ?? "remote";
                     return (
-                      <div
+                      <button
                         key={name}
-                        className="flex items-center gap-2.5 rounded-[5px] px-1 py-1.5 transition-colors hover:bg-accent"
+                        className="flex w-full items-center gap-2.5 rounded-[5px] px-1 py-1.5 text-left transition-colors hover:bg-accent"
+                        onClick={() => navigate("remotes")}
                       >
                         <RemoteChip name={name} />
                         <div className="min-w-0 flex-1">
@@ -375,17 +375,9 @@ export function DashboardView() {
                           <div className="text-muted-foreground text-xs">{type}</div>
                         </div>
                         <span className="size-1.5 shrink-0 rounded-full bg-success" />
-                      </div>
+                      </button>
                     );
                   })}
-                  {remoteCount > 6 && (
-                    <button
-                      className="text-muted-foreground hover:text-foreground mt-1 w-full rounded-[5px] py-1.5 text-[12px] font-medium transition-colors hover:bg-accent"
-                      onClick={() => navigate("remotes")}
-                    >
-                      View all {remoteCount} remotes
-                    </button>
-                  )}
                 </div>
               )}
             </CardContent>
