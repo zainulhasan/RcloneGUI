@@ -23,6 +23,26 @@ interface BrowserState {
   openFs: (fs: string) => void;
 }
 
+const PERSIST_KEY = "browser-panes-v1";
+
+function loadSavedPanes(): [PaneState, PaneState] | null {
+  try {
+    const s = localStorage.getItem(PERSIST_KEY);
+    if (s) return JSON.parse(s) as [PaneState, PaneState];
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function savePanes(panes: [PaneState, PaneState]) {
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(panes));
+  } catch {
+    /* ignore */
+  }
+}
+
 function withPane(
   panes: [PaneState, PaneState],
   index: PaneIndex,
@@ -33,8 +53,10 @@ function withPane(
   return copy;
 }
 
+const saved = loadSavedPanes();
+
 export const useBrowserStore = create<BrowserState>((set) => ({
-  panes: [
+  panes: saved ?? [
     { fs: "/", path: "" },
     { fs: null, path: "" },
   ],
@@ -42,24 +64,33 @@ export const useBrowserStore = create<BrowserState>((set) => ({
   homePath: "",
   setActive: (pane) => set({ active: pane }),
   setFs: (pane, fs) =>
-    set((s) => ({
-      // A local pane starts at the user's home folder, not the filesystem root.
-      panes: withPane(s.panes, pane, { fs, path: fs === "/" ? s.homePath : "" }),
-      active: pane,
-    })),
+    set((s) => {
+      const panes = withPane(s.panes, pane, { fs, path: fs === "/" ? s.homePath : "" });
+      savePanes(panes);
+      return { panes, active: pane };
+    }),
   setPath: (pane, path) =>
-    set((s) => ({ panes: withPane(s.panes, pane, { ...s.panes[pane], path }), active: pane })),
+    set((s) => {
+      const panes = withPane(s.panes, pane, { ...s.panes[pane], path });
+      savePanes(panes);
+      return { panes, active: pane };
+    }),
   setHomePath: (home) =>
     set((s) => {
       const next: Partial<BrowserState> = { homePath: home };
-      // Point panes still at the default local root to home.
       const panes = s.panes.map((p) =>
         p.fs === "/" && p.path === "" ? { ...p, path: home } : p,
       ) as [PaneState, PaneState];
       next.panes = panes;
+      savePanes(panes);
       return next;
     }),
-  openFs: (fs) => set((s) => ({ panes: withPane(s.panes, 0, { fs, path: "" }), active: 0 })),
+  openFs: (fs) =>
+    set((s) => {
+      const panes = withPane(s.panes, 0, { fs, path: "" });
+      savePanes(panes);
+      return { panes, active: 0 };
+    }),
 }));
 
 /** "/Users/zain" → "Users/zain" (rclone local fs is "/", paths are relative). */

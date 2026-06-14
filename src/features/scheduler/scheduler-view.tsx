@@ -43,7 +43,7 @@ import { FlagsEditor } from "@/features/operations/flags-editor";
 import { formatDateTime } from "@/lib/format";
 import { useScheduledJobsStore, newScheduledJob, type ScheduledJob } from "@/store/scheduled-jobs";
 
-import { validateCron } from "./cron";
+import { cronToHuman, validateCron } from "./cron";
 import { presetToScheduledJob } from "./preset-utils";
 import { executeScheduledJob } from "./use-scheduler-runner";
 
@@ -62,6 +62,7 @@ function JobDialog({
   );
 
   const cronError = validateCron(draft.cron);
+  const cronHuman = cronError === null ? cronToHuman(draft.cron) : null;
   const valid = draft.name.trim() && draft.srcFs.trim() && draft.dstFs.trim() && cronError === null;
 
   const save = () => {
@@ -133,17 +134,44 @@ function JobDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="job-cron">Schedule (cron)</Label>
-            <Input
-              id="job-cron"
-              className="font-mono text-xs"
-              value={draft.cron}
-              onChange={(e) => setDraft({ ...draft, cron: e.target.value })}
-              placeholder="0 3 * * *"
-              aria-invalid={!!cronError}
-            />
-            <p className={cronError ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
-              {cronError ?? "minute hour day month weekday — e.g. “0 3 * * *” is daily at 03:00."}
-            </p>
+            <div className="flex gap-2">
+              <Input
+                id="job-cron"
+                className="font-mono text-xs"
+                value={draft.cron}
+                onChange={(e) => setDraft({ ...draft, cron: e.target.value })}
+                placeholder="0 3 * * *"
+                aria-invalid={!!cronError}
+              />
+              <Select value="" onValueChange={(v) => setDraft({ ...draft, cron: v })}>
+                <SelectTrigger className="w-40 shrink-0 text-xs" aria-label="Preset schedule">
+                  <SelectValue placeholder="Presets..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    { label: "Every hour", value: "0 * * * *" },
+                    { label: "Daily at midnight", value: "0 0 * * *" },
+                    { label: "Daily at 3 AM", value: "0 3 * * *" },
+                    { label: "Daily at 9 AM", value: "0 9 * * *" },
+                    { label: "Weekly (Mon 00:00)", value: "0 0 * * 1" },
+                    { label: "Monthly (1st 00:00)", value: "0 0 1 * *" },
+                  ].map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {cronError ? (
+              <p className="text-destructive text-xs">{cronError}</p>
+            ) : cronHuman ? (
+              <p className="text-primary text-xs font-medium">{cronHuman}</p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                {'minute hour day month weekday — e.g. "0 3 * * *" is daily at 03:00.'}
+              </p>
+            )}
           </div>
 
           <FlagsEditor value={draft.flags} onChange={(flags) => setDraft({ ...draft, flags })} />
@@ -226,7 +254,7 @@ function PresetsCard({ onSchedule }: { onSchedule: (template: ScheduledJob) => v
                         <CalendarClock />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Schedule…</TooltipContent>
+                    <TooltipContent>Schedule...</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>

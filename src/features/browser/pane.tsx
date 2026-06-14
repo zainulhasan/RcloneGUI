@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUp,
   ChevronRight,
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
   Filter as FilterIcon,
   Folder,
   FolderOpen,
@@ -11,6 +14,8 @@ import {
   Home,
   Loader2,
   RefreshCw,
+  Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -45,16 +50,27 @@ import { fileVisual } from "./file-visual";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { absoluteToLocalPath, parentPath, useBrowserStore, type PaneIndex } from "@/store/browser";
+import { useJobsStore } from "@/store/jobs";
 
 import { filterListing } from "./filter";
 import { renamedPath, renameItem, validateRename } from "./rename";
 import { applyClick, EMPTY_SELECTION, pruneSelection, type SelectionState } from "./selection";
 import { LOCAL_FS, useListing } from "./use-listing";
 
-function sortListing(items: RcListItem[]): RcListItem[] {
+type SortCol = "name" | "date" | "size";
+
+function sortListing(
+  items: RcListItem[],
+  col: SortCol = "name",
+  dir: "asc" | "desc" = "asc",
+): RcListItem[] {
   return [...items].sort((a, b) => {
     if (a.IsDir !== b.IsDir) return a.IsDir ? -1 : 1;
-    return a.Name.localeCompare(b.Name, undefined, { numeric: true });
+    let cmp = 0;
+    if (col === "name") cmp = a.Name.localeCompare(b.Name, undefined, { numeric: true });
+    else if (col === "date") cmp = (a.ModTime ?? "").localeCompare(b.ModTime ?? "");
+    else if (col === "size") cmp = (a.IsDir ? 0 : a.Size) - (b.IsDir ? 0 : b.Size);
+    return dir === "asc" ? cmp : -cmp;
   });
 }
 
@@ -102,6 +118,8 @@ function Breadcrumb({
   );
 }
 
+const DND_TYPE = "application/x-rcgui-items";
+
 export interface PaneProps {
   index: PaneIndex;
   remotes: string[];
@@ -109,9 +127,21 @@ export interface PaneProps {
   renderItemActions?: (items: RcListItem[], pane: { fs: string; path: string }) => React.ReactNode;
   /** Badge or marker rendered after the file name. */
   renderItemBadge?: (item: RcListItem, pane: { fs: string; path: string }) => React.ReactNode;
+  /** Called when items from another pane are dropped onto this one. */
+  onDropItems?: (
+    items: RcListItem[],
+    source: { fs: string; path: string },
+    targetIndex: PaneIndex,
+  ) => void;
 }
 
-export function Pane({ index, remotes, renderItemActions, renderItemBadge }: PaneProps) {
+export function Pane({
+  index,
+  remotes,
+  renderItemActions,
+  renderItemBadge,
+  onDropItems,
+}: PaneProps) {
   const pane = useBrowserStore((s) => s.panes[index]);
   const paneFs = pane.fs;
   const active = useBrowserStore((s) => s.active === index);
@@ -119,6 +149,7 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
   const setPath = useBrowserStore((s) => s.setPath);
   const setActive = useBrowserStore((s) => s.setActive);
   const homePath = useBrowserStore((s) => s.homePath);
+  const track = useJobsStore((s) => s.track);
 
   const pickLocalFolder = async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
@@ -128,7 +159,14 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
   const queryClient = useQueryClient();
   const listing = useListing(pane.fs, pane.path);
-  const items = useMemo(() => sortListing(listing.data ?? []), [listing.data]);
+  const [sort, setSort] = useState<{ col: SortCol; dir: "asc" | "desc" }>({
+    col: "name",
+    dir: "asc",
+  });
+  const items = useMemo(
+    () => sortListing(listing.data ?? [], sort.col, sort.dir),
+    [listing.data, sort],
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const visibleItems = useMemo(
@@ -136,7 +174,6 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
     [items, filterOpen, filterQuery],
   );
   const visibleKeys = useMemo(() => visibleItems.map((i) => i.Path), [visibleItems]);
-
   const [rawSelection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [mkdirOpen, setMkdirOpen] = useState(false);
   const [mkdirName, setMkdirName] = useState("");
@@ -161,6 +198,76 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
 
   const [renaming, setRenaming] = useState<RcListItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [deleteTargets, setDeleteTargets] = useState<RcListItem[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(DND_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(DND_TYPE)) return;
+    dragCounter.current++;
+    setIsDragOver(true);
+  };
+  const handleDragLeave = () => {
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDragOver(false);
+    }
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDragOver(false);
+    const raw = e.dataTransfer.getData(DND_TYPE);
+    if (!raw || !pane.fs || !onDropItems) return;
+    try {
+      const {
+        sourceFs,
+        sourcePath,
+        items: dragged,
+      } = JSON.parse(raw) as {
+        sourceFs: string;
+        sourcePath: string;
+        items: RcListItem[];
+      };
+      if (sourceFs === pane.fs && sourcePath === pane.path) return;
+      onDropItems(dragged, { fs: sourceFs, path: sourcePath }, index);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const uploadFiles = async () => {
+    if (!pane.fs) return;
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const result = await open({ multiple: true, directory: false });
+    if (!result) return;
+    const paths = Array.isArray(result) ? result : [result];
+    let started = 0;
+    for (const filePath of paths) {
+      const fileName = filePath.replace(/\\/g, "/").split("/").pop() ?? filePath;
+      const srcRemote = absoluteToLocalPath(filePath);
+      const dstRemote = pane.path ? `${pane.path}/${fileName}` : fileName;
+      try {
+        const job = await rc.copyFile("/", srcRemote, pane.fs, dstRemote);
+        track({ jobid: job.jobid, label: `Upload "${fileName}"`, kind: "copy" });
+        started++;
+      } catch (err) {
+        toast.error(`Upload failed — ${fileName}: ${(err as Error).message}`);
+      }
+    }
+    if (started > 0) {
+      toast.success(started === 1 ? "Upload started" : `${started} uploads started`);
+      void refresh();
+    }
+  };
 
   const renameError = renaming
     ? validateRename(
@@ -202,13 +309,43 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
     }
   };
 
+  const confirmDelete = async () => {
+    if (!paneFs || !deleteTargets) return;
+    setDeleting(true);
+    try {
+      for (const item of deleteTargets) {
+        if (item.IsDir) {
+          await rc.purge(paneFs, item.Path);
+        } else {
+          await rc.deleteFile(paneFs, item.Path);
+        }
+      }
+      toast.success(
+        deleteTargets.length === 1
+          ? `Deleted "${deleteTargets[0].Name}"`
+          : `Deleted ${deleteTargets.length} items`,
+      );
+      setSelection(EMPTY_SELECTION);
+      setDeleteTargets(null);
+      void refresh();
+    } catch (err) {
+      toast.error(`Delete failed: ${(err as Error).message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <section
       aria-label={`Pane ${index + 1}`}
       onMouseDown={() => setActive(index)}
       className={cn(
-        "bg-card flex min-h-0 flex-1 flex-col rounded-lg border",
-        active ? "border-primary/50" : "border-border",
+        "bg-card flex min-h-0 flex-1 flex-col rounded-lg border transition-colors",
+        isDragOver
+          ? "border-primary ring-1 ring-primary/40"
+          : active
+            ? "border-primary/50"
+            : "border-border",
       )}
     >
       <header className="flex items-center gap-2 border-b px-2 py-1.5">
@@ -285,6 +422,21 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                 <TooltipContent>Choose folder…</TooltipContent>
               </Tooltip>
             </>
+          )}
+          {pane.fs !== null && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Upload files"
+                  onClick={() => void uploadFiles()}
+                >
+                  <Upload />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Upload files…</TooltipContent>
+            </Tooltip>
           )}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -364,7 +516,20 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        className="relative min-h-0 flex-1 overflow-y-auto"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragOver && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded bg-primary/5">
+            <span className="bg-background/90 text-primary rounded-md border border-primary/30 px-3 py-1.5 text-sm font-medium">
+              Drop to copy here
+            </span>
+          </div>
+        )}
         {pane.fs === null ? (
           <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-4">
             <HardDrive className="size-6 opacity-50" />
@@ -388,9 +553,53 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
             <ContextMenuTrigger asChild>
               <div>
                 <div className="text-muted-foreground bg-surface sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1 text-[11px] font-semibold tracking-[0.06em] uppercase">
-                  <span className="min-w-0 flex-1">Name</span>
-                  <span className="w-24 shrink-0 text-right">Modified</span>
-                  <span className="w-16 shrink-0 text-right">Size</span>
+                  {(
+                    [
+                      {
+                        col: "name" as SortCol,
+                        label: "Name",
+                        className: "min-w-0 flex-1 text-left",
+                      },
+                      {
+                        col: "date" as SortCol,
+                        label: "Modified",
+                        className: "w-24 shrink-0 text-right justify-end",
+                      },
+                      {
+                        col: "size" as SortCol,
+                        label: "Size",
+                        className: "w-16 shrink-0 text-right justify-end",
+                      },
+                    ] as const
+                  ).map(({ col, label, className }) => {
+                    const active = sort.col === col;
+                    const SortIcon = active
+                      ? sort.dir === "asc"
+                        ? ChevronUp
+                        : ChevronDown
+                      : ChevronsUpDown;
+                    return (
+                      <button
+                        key={col}
+                        className={cn(
+                          "hover:text-foreground flex items-center gap-0.5 transition-colors",
+                          className,
+                          active && "text-foreground",
+                        )}
+                        onClick={() =>
+                          setSort((s) =>
+                            s.col === col
+                              ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
+                              : { col, dir: "asc" },
+                          )
+                        }
+                      >
+                        {col !== "name" && <SortIcon className="size-3" />}
+                        {label}
+                        {col === "name" && <SortIcon className="size-3" />}
+                      </button>
+                    );
+                  })}
                 </div>
                 <ul className="p-1" role="listbox" aria-multiselectable>
                   {visibleItems.map((item, i) => {
@@ -401,6 +610,19 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                         key={item.Path}
                         role="option"
                         aria-selected={isSelected}
+                        draggable
+                        onDragStart={(e) => {
+                          const dragItems = isSelected ? selectedItems : [item];
+                          e.dataTransfer.setData(
+                            DND_TYPE,
+                            JSON.stringify({
+                              sourceFs: pane.fs,
+                              sourcePath: pane.path,
+                              items: dragItems,
+                            }),
+                          );
+                          e.dataTransfer.effectAllowed = "copyMove";
+                        }}
                         onClick={(e) =>
                           setSelection((s) =>
                             applyClick(s, visibleKeys, i, {
@@ -488,6 +710,14 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
                     Copy path
                   </ContextMenuItem>
                   <ContextMenuSeparator />
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteTargets(selectedItems)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete…
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
                 </>
               )}
               <ContextMenuItem onClick={() => setMkdirOpen(true)}>New folder…</ContextMenuItem>
@@ -565,6 +795,33 @@ export function Pane({ index, remotes, renderItemActions, renderItemBadge }: Pan
               disabled={!!renameError || renameValue.trim() === renaming?.Name}
             >
               Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteTargets !== null} onOpenChange={(o) => !o && setDeleteTargets(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Delete{" "}
+              {deleteTargets?.length === 1
+                ? `"${deleteTargets[0].Name}"`
+                : `${deleteTargets?.length ?? 0} items`}
+              ?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            {deleteTargets?.some((i) => i.IsDir)
+              ? "Directories and all their contents will be permanently removed."
+              : "This cannot be undone."}
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteTargets(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => void confirmDelete()}>
+              {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

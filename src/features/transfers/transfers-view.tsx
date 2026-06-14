@@ -1,4 +1,12 @@
-import { ArrowDownUp, CheckCircle2, Loader2, Trash2, XCircle, XOctagon } from "lucide-react";
+import {
+  ArrowDownUp,
+  CheckCircle2,
+  Loader2,
+  RotateCcw,
+  Trash2,
+  XCircle,
+  XOctagon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +20,7 @@ import { rc } from "@/lib/rc-client";
 import { formatBytes, formatEta, formatSpeed } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useJobsStore, type TrackedJob } from "@/store/jobs";
+import type { WatchJobMeta } from "@/features/media/types";
 
 import { HistoryTab } from "./history-tab";
 import { Sparkline } from "./sparkline";
@@ -34,6 +43,25 @@ function JobCard({ job }: { job: TrackedJob }) {
       toast.error(`Could not cancel: ${(err as Error).message}`);
     }
   };
+
+  const retryWatch = () => {
+    const meta = job.meta as WatchJobMeta | undefined;
+    if (!meta) return;
+    void import("@/features/media/watch-actions").then((m) => {
+      const item = {
+        Path: meta.remotePath,
+        Name: meta.name,
+        Size: meta.size,
+        MimeType: "",
+        ModTime: "",
+        IsDir: meta.isDir,
+      };
+      void m.startWatchSync(item, { fs: meta.remoteFs });
+    });
+    remove(job.jobid);
+  };
+
+  const isFailedWatch = job.finished && !job.success && job.kind === "watch" && !!job.meta;
 
   return (
     <Card>
@@ -69,6 +97,16 @@ function JobCard({ job }: { job: TrackedJob }) {
               <TooltipContent>Cancel</TooltipContent>
             </Tooltip>
           )}
+          {isFailedWatch && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Retry" onClick={retryWatch}>
+                  <RotateCcw />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Retry</TooltipContent>
+            </Tooltip>
+          )}
           {job.finished && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -88,9 +126,18 @@ function JobCard({ job }: { job: TrackedJob }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {job.finished ? (
-          <p className="text-muted-foreground text-xs">
-            {job.success ? "Completed" : (job.error ?? "Failed")}
-          </p>
+          <>
+            <p
+              className={cn("text-xs", job.success ? "text-muted-foreground" : "text-destructive")}
+            >
+              {job.success ? "Completed" : (job.error ?? "Failed")}
+            </p>
+            {job.success && job.kind === "watch" && job.meta && (
+              <p className="text-muted-foreground font-mono text-xs truncate">
+                → {(job.meta as WatchJobMeta).localPath}
+              </p>
+            )}
+          </>
         ) : (
           <>
             <div className="flex items-center gap-3">

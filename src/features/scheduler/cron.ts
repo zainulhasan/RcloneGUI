@@ -88,6 +88,53 @@ export function validateCron(expr: string): string | null {
   return parseCron(expr) ? null : "Invalid cron expression.";
 }
 
+const DOW_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** Human-readable description of a valid cron expression, or null if it can't be summarised. */
+export function cronToHuman(expr: string): string | null {
+  const p = parseCron(expr);
+  if (!p) return null;
+  const fields = expr.trim().split(/\s+/);
+  const [minF, hourF, domF, monthF, dowF] = fields;
+
+  const oneHour = p.hour.size === 1;
+  const oneMinute = p.minute.size === 1;
+  const h = oneHour ? String([...p.hour][0]).padStart(2, "0") : null;
+  const m = oneMinute ? String([...p.minute][0]).padStart(2, "0") : null;
+  const time = h !== null && m !== null ? `${h}:${m}` : null;
+
+  // Every N minutes (*/N * * * *)
+  if (minF.startsWith("*/") && hourF === "*" && domF === "*" && monthF === "*" && dowF === "*") {
+    const n = parseInt(minF.slice(2), 10);
+    return n === 1 ? "Every minute" : `Every ${n} minutes`;
+  }
+  // Every hour (:MM)
+  if (hourF === "*" && domF === "*" && monthF === "*" && dowF === "*" && m !== null) {
+    return `Every hour at :${m}`;
+  }
+  if (!time) return null;
+  // Specific weekday(s)
+  if (!p.dowIsWildcard && p.domIsWildcard) {
+    if (p.dayOfWeek.size === 1) {
+      return `Every ${DOW_NAMES[[...p.dayOfWeek][0]]} at ${time}`;
+    }
+    if (p.dayOfWeek.size === 5 && !p.dayOfWeek.has(0) && !p.dayOfWeek.has(6)) {
+      return `Weekdays at ${time}`;
+    }
+  }
+  // Specific day of month
+  if (!p.domIsWildcard && p.dowIsWildcard && p.dayOfMonth.size === 1) {
+    const d = [...p.dayOfMonth][0];
+    const sfx = d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th";
+    return `Monthly on the ${d}${sfx} at ${time}`;
+  }
+  // Daily
+  if (p.domIsWildcard && p.dowIsWildcard) {
+    return `Daily at ${time}`;
+  }
+  return null;
+}
+
 /** Does `expr` match the given local time (to the minute)? */
 export function cronMatches(expr: string, date: Date): boolean {
   const cron = parseCron(expr);

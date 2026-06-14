@@ -116,6 +116,15 @@ export class RcClient {
     });
   }
 
+  /** Re-run the OAuth browser flow for an existing OAuth remote. */
+  reconnectRemote(name: string): Promise<void> {
+    return this.call("config/update", {
+      name,
+      parameters: {},
+      opt: { nonInteractive: false, obscure: true },
+    });
+  }
+
   deleteRemote(name: string): Promise<void> {
     return this.call("config/delete", { name });
   }

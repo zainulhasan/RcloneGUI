@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { BrowserView } from "@/features/browser/browser-view";
 import type { RcListItem } from "@/lib/rc-client";
-import { useBrowserStore } from "@/store/browser";
+import { useBrowserStore, type PaneIndex } from "@/store/browser";
 import { useSettingsStore } from "@/store/settings";
 
 import { DeleteDialog } from "./delete-dialog";
@@ -33,23 +33,43 @@ export function BrowserWithOperations({
 
   const otherPane = panes[active === 0 ? 1 : 0];
 
+  const buildDstFs = (dst: { fs: string | null; path: string }) => {
+    if (!dst.fs) return null;
+    return dst.path === ""
+      ? dst.fs
+      : `${dst.fs}${dst.fs.endsWith(":") || dst.fs.endsWith("/") ? "" : "/"}${dst.path}`;
+  };
+
   const startOperation = (
     kind: DirOperationRequest["kind"],
     items: RcListItem[],
     pane: { fs: string; path: string },
   ) => {
-    if (otherPane.fs === null) return;
-    const dstFs =
-      otherPane.path === ""
-        ? otherPane.fs
-        : `${otherPane.fs}${otherPane.fs.endsWith(":") || otherPane.fs.endsWith("/") ? "" : "/"}${otherPane.path}`;
+    const dstFs = buildDstFs(otherPane);
+    if (!dstFs) return;
     setOperation({ kind, source: selectionToOperation(pane.fs, pane.path, items), dstFs });
+  };
+
+  const handleDropItems = (
+    items: RcListItem[],
+    source: { fs: string; path: string },
+    targetIndex: PaneIndex,
+  ) => {
+    const dst = panes[targetIndex];
+    const dstFs = buildDstFs(dst);
+    if (!dstFs) return;
+    setOperation({
+      kind: "copy",
+      source: selectionToOperation(source.fs, source.path, items),
+      dstFs,
+    });
   };
 
   return (
     <>
       <BrowserView
         renderItemBadge={renderItemBadge}
+        onDropItems={handleDropItems}
         renderItemActions={(items, pane) => (
           <>
             {renderItemActions?.(items, pane)}
